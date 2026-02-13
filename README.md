@@ -90,6 +90,144 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## Stay in touch
 
 - Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
+
+# 📊 CMI Backend Indicadores
+
+## 🚀 Executive KPI Engine --- Multi-Tenant
+
+Backend profesional para gestión de indicadores estratégicos (CMI / KPI
+Engine) con arquitectura moderna y lista para frontend con gráficos
+ejecutivos.
+
+------------------------------------------------------------------------
+
+## 🏗 Arquitectura
+
+-   **NestJS 11**
+-   **Prisma ORM**
+-   **PostgreSQL**
+-   Arquitectura **Multi-Tenant**
+-   Motor de ejecución desacoplado
+-   Auditoría de ejecuciones
+-   Dashboard ejecutivo avanzado
+-   Seed profesional idempotente
+
+------------------------------------------------------------------------
+
+## 🧠 Características Clave
+
+✔ Multi-tenant por header `x-tenant-id`\
+✔ Historial de indicadores (últimos 6 periodos)\
+✔ Tendencia automática (UP / DOWN / STABLE)\
+✔ % Cumplimiento vs Target\
+✔ Variación vs periodo anterior\
+✔ Orden automático por criticidad\
+✔ Executive Score global (0--100)\
+✔ Auditoría completa de ejecuciones\
+✔ Arquitectura lista para SaaS
+
+------------------------------------------------------------------------
+
+## 📦 Modelos Principales
+
+-   Tenant
+-   IndicatorType
+-   Process
+-   Objective
+-   Indicator
+-   IndicatorValue
+-   IndicatorSource
+-   ExecutionLog
+
+------------------------------------------------------------------------
+
+## 📊 Dashboard Ejecutivo
+
+Endpoint principal:
+
+    GET /dashboard/executive
+
+Retorna:
+
+-   Summary global
+-   Executive Score
+-   Lista ordenada por criticidad
+-   Tendencia
+-   Cumplimiento %
+-   Variación %
+-   Historial últimos 6 periodos
+
+------------------------------------------------------------------------
+
+## 🔐 Multi-Tenant
+
+Todas las peticiones requieren:
+
+    x-tenant-id: <UUID_DEL_TENANT>
+
+------------------------------------------------------------------------
+
+## 🌱 Seed de Base de Datos
+
+Ejecutar:
+
+    npx prisma db seed
+
+Crea automáticamente:
+
+-   Tenant (MES)
+-   IndicatorType (ES)
+-   Process (QA_SUPPORT)
+-   Objective (REDUCE_SUPPORT_ERRORS)
+-   Indicator (QA_SUPPORT_COMMITS)
+-   Valor inicial de ejemplo
+
+------------------------------------------------------------------------
+
+## 🛠 Instalación
+
+``` bash
+npm install
+npx prisma migrate dev
+npx prisma db seed
+npm run start:dev
+```
+
+------------------------------------------------------------------------
+
+## 📈 Executive Score
+
+Se calcula como:
+
+> Promedio de cumplimiento (%) de todos los indicadores con target.
+
+Máximo 100.
+
+------------------------------------------------------------------------
+
+## 🧭 Flujo Git Recomendado
+
+-   `main` → Rama estable (producción)
+-   `dev` → Desarrollo activo
+-   PR obligatorio de `dev` → `main`
+
+------------------------------------------------------------------------
+
+## 🧩 Próximos Pasos
+
+-   JWT multi-tenant authentication
+-   Alertas automáticas
+-   Scheduler dinámico
+-   Frontend React con gráficos ejecutivos
+-   Despliegue SaaS-ready
+
+------------------------------------------------------------------------
+
+## 👨‍💻 Autor
+
+Denys Buedo Hidalgo\
+Executive KPI Engine
+
 - Website - [https://nestjs.com](https://nestjs.com/)
 - Twitter - [@nestframework](https://twitter.com/nestframework)
 
