@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HttpMethod {
+  GET
+  POST
+  PUT
+  DELETE
+}
+
+enum IndicatorUnit {
+  NUMBER
+  PERCENT
+}
+
+enum SourceRole {
+  DATA
+  NUMERATOR
+  DENOMINATOR
+}
+
+enum IndicatorStatus {
+  OK
+  WARNING
+  CRITICAL
+}
+
+enum EvaluationDirection {
+  HIGHER_IS_BETTER
+  LOWER_IS_BETTER
+}
+
+model Tenant {
+  id     String  @id @default(uuid())
+  name   String
+  code   String  @unique
+  active Boolean @default(true)
+
+  indicators      Indicator[]
+  sources         Source[]
+  indicatorTypes  IndicatorType[]
+  processes       Process[]
+  objectives      Objective[]
+  indicatorValues IndicatorValue[]
+  executionLogs   ExecutionLog[]   // 👈 NUEVO
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Source {
+  id           String     @id @default(uuid())
+  name         String
+  description  String?
+  endpoint     String
+  method       HttpMethod
+  headers      Json?
+  queryParams  Json?
+  bodyTemplate Json?
+  timeout      Int        @default(5000)
+  active       Boolean    @default(true)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  indicatorLinks IndicatorSource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model IndicatorType {
+  id          String  @id @default(uuid())
+  code        String
+  name        String
+  description String?
+  active      Boolean @default(true)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  indicators Indicator[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Process {
+  id          String  @id @default(uuid())
+  code        String
+  name        String
+  description String?
+  active      Boolean @default(true)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  indicators Indicator[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Objective {
+  id          String  @id @default(uuid())
+  code        String
+  name        String
+  description String?
+  active      Boolean @default(true)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  indicators IndicatorObjective[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Indicator {
+  id          String        @id @default(uuid())
+  code        String
+  name        String
+  description String?
+  unit        IndicatorUnit
+  decimals    Int           @default(0)
+  active      Boolean       @default(true)
+
+  // Frecuencia flexible
+  frequencyMonths Int?
+  frequencyDays   Int?
+
+  // NUEVO: Dirección de evaluación
+  evaluationDirection EvaluationDirection @default(HIGHER_IS_BETTER)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  indicatorTypeId String
+  processId       String
+
+  indicatorType IndicatorType @relation(fields: [indicatorTypeId], references: [id])
+  process       Process       @relation(fields: [processId], references: [id])
+
+  objectives IndicatorObjective[]
+  sources    IndicatorSource[]
+  values     IndicatorValue[]
+  executionLogs ExecutionLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model IndicatorObjective {
+  indicatorId String
+  objectiveId String
+
+  indicator Indicator @relation(fields: [indicatorId], references: [id])
+  objective Objective @relation(fields: [objectiveId], references: [id])
+
+  @@id([indicatorId, objectiveId])
+}
+
+model IndicatorSource {
+  id          String     @id @default(uuid())
+  indicatorId String
+  sourceId    String
+  role        SourceRole @default(DATA)
+
+  indicator Indicator @relation(fields: [indicatorId], references: [id])
+  source    Source    @relation(fields: [sourceId], references: [id])
+
+  @@unique([indicatorId, sourceId, role])
+}
+
+model IndicatorValue {
+  id          String   @id @default(uuid())
+  indicatorId String
+  tenantId    String
+
+  value       Decimal
+  target      Decimal?
+
+  periodStart DateTime
+  periodEnd   DateTime
+
+  status      IndicatorStatus @default(OK)
+  error       String?
+
+  createdAt DateTime @default(now())
+
+  indicator Indicator @relation(fields: [indicatorId], references: [id])
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model ExecutionLog {
+  id           String   @id @default(uuid())
+  tenantId     String
+  indicatorId  String
+
+  startedAt    DateTime
+  finishedAt   DateTime?
+  durationMs   Int?
+
+  status       String   // SUCCESS | ERROR
+  message      String?
+
+  createdAt DateTime @default(now())
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  indicator Indicator @relation(fields: [indicatorId], references: [id])
+
+  @@index([tenantId])
+  @@index([indicatorId])
+}
+
