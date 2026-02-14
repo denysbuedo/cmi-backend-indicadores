@@ -1,40 +1,48 @@
 import { Controller, Get, Req } from '@nestjs/common';
-import type { Request } from 'express';
 import { DashboardService } from './dashboard.service';
+import type { Request } from 'express';
 
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
-  // ---------------------------------------
-  // SUMMARY
-  // ---------------------------------------
   @Get('summary')
   getSummary(@Req() req: Request) {
-    const tenantId = (req as any).tenantId;
-    return this.dashboardService.getSummary(tenantId);
+    return this.dashboardService.getSummary(req['tenantId']);
   }
 
-  // ---------------------------------------
-  // OVERDUE
-  // ---------------------------------------
   @Get('overdue')
   getOverdue(@Req() req: Request) {
-    const tenantId = (req as any).tenantId;
-    return this.dashboardService.getOverdueIndicators(tenantId);
+    return this.dashboardService.getOverdueIndicators(
+      req['tenantId'],
+    );
   }
 
-  // ---------------------------------------
-  // EXECUTION STATS
-  // ---------------------------------------
-  @Get('executions')
+  @Get('execution-stats')
   getExecutionStats(@Req() req: Request) {
-    const tenantId = (req as any).tenantId;
-    return this.dashboardService.getExecutionStats(tenantId);
+    return this.dashboardService.getExecutionStats(
+      req['tenantId'],
+    );
   }
 
   @Get('executive')
-  getExecutive(@Req() req: any) {
-    return this.dashboardService.getExecutiveDashboard(req.tenantId);
+  getExecutive(@Req() req: Request) {
+    return this.dashboardService.getExecutiveDashboard(
+      req['tenantId'],
+    );
+  }
+
+  @Get('process-heatmap')
+  getProcessHeatmap(@Req() req: Request) {
+    return this.dashboardService.getProcessHeatmap(
+      req['tenantId'],
+    );
+  }
+
+  @Get('objective-scores')
+  getObjectiveScores(@Req() req: Request) {
+    return this.dashboardService.getObjectiveScores(
+      req['tenantId'],
+    );
   }
 }
