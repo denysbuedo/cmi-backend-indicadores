@@ -118,13 +118,16 @@ export class DashboardService {
     };
   }
 
-  // =====================================================
-  // EXECUTIVE DASHBOARD
-  // =====================================================
   async getExecutiveDashboard(tenantId: string) {
     const indicators = await this.prisma.indicator.findMany({
       where: { tenantId, active: true },
       include: {
+        process: true,
+        objectives: {
+          include: {
+            objective: true,
+          },
+        },
         values: {
           orderBy: { periodEnd: 'desc' },
         },
@@ -144,6 +147,17 @@ export class DashboardService {
           code: indicator.code,
           name: indicator.name,
           unit: indicator.unit,
+
+          processId: indicator.process.id,
+          processCode: indicator.process.code,
+          processName: indicator.process.name,
+
+          objectives: indicator.objectives.map((o) => ({
+            objectiveId: o.objective.id,
+            objectiveCode: o.objective.code,
+            objectiveName: o.objective.name,
+          })),
+
           latestValue: null,
           target: null,
           compliancePercent: null,
@@ -208,6 +222,17 @@ export class DashboardService {
         code: indicator.code,
         name: indicator.name,
         unit: indicator.unit,
+
+        processId: indicator.process.id,
+        processCode: indicator.process.code,
+        processName: indicator.process.name,
+
+        objectives: indicator.objectives.map((o) => ({
+          objectiveId: o.objective.id,
+          objectiveCode: o.objective.code,
+          objectiveName: o.objective.name,
+        })),
+
         latestValue: value,
         target,
         compliancePercent: compliance,
