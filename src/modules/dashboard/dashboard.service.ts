@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // =====================================================
   // SUMMARY
@@ -253,13 +253,149 @@ export class DashboardService {
   // PROCESS HEATMAP
   // =====================================================
   async getProcessHeatmap(tenantId: string) {
-    return []; // lo dejamos estable por ahora
+    const processes = await this.prisma.process.findMany({
+      where: { tenantId, active: true },
+      include: {
+        indicators: {
+          where: { active: true },
+          include: {
+            values: {
+              orderBy: { periodEnd: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
+    const result: {
+      processId: string;
+      processCode: string;
+      processName: string;
+      score: number | null;
+      status: 'OK' | 'WARNING' | 'CRITICAL' | 'NO_DATA';
+    }[] = [];
+
+    for (const process of processes) {
+      let weightedSum = 0;
+      let totalWeight = 0;
+
+      for (const indicator of process.indicators) {
+        const latest = indicator.values[0];
+        if (!latest || !latest.target) continue;
+
+        const value = Number(latest.value);
+        const target = Number(latest.target);
+
+        if (target === 0) continue;
+
+        let compliance =
+          indicator.evaluationDirection === 'LOWER_IS_BETTER'
+            ? (target / value) * 100
+            : (value / target) * 100;
+
+        compliance = Math.max(0, Math.min(100, compliance));
+
+        const weight = indicator.weight ?? 1;
+        weightedSum += compliance * weight;
+        totalWeight += weight;
+      }
+
+      const score =
+        totalWeight > 0
+          ? Math.round(weightedSum / totalWeight)
+          : null;
+
+      let status: 'OK' | 'WARNING' | 'CRITICAL' | 'NO_DATA' =
+        'NO_DATA';
+
+      if (score !== null) {
+        if (score >= 80) status = 'OK';
+        else if (score >= 60) status = 'WARNING';
+        else status = 'CRITICAL';
+      }
+
+      result.push({
+        processId: process.id,
+        processCode: process.code,
+        processName: process.name,
+        score,
+        status,
+      });
+    }
+
+    return result;
   }
 
   // =====================================================
   // OBJECTIVE SCORES
   // =====================================================
   async getObjectiveScores(tenantId: string) {
-    return []; // estable por ahora
+    const objectives = await this.prisma.objective.findMany({
+      where: { tenantId, active: true },
+      include: {
+        indicators: {
+          include: {
+            indicator: {
+              include: {
+                values: {
+                  orderBy: { periodEnd: 'desc' },
+                  take: 1,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const result: {
+      objectiveId: string;
+      objectiveCode: string;
+      objectiveName: string;
+      score: number | null;
+    }[] = [];
+
+    for (const objective of objectives) {
+      let weightedSum = 0;
+      let totalWeight = 0;
+
+      for (const link of objective.indicators) {
+        const indicator = link.indicator;
+        const latest = indicator.values[0];
+
+        if (!latest || !latest.target) continue;
+
+        const value = Number(latest.value);
+        const target = Number(latest.target);
+
+        if (target === 0) continue;
+
+        let compliance =
+          indicator.evaluationDirection === 'LOWER_IS_BETTER'
+            ? (target / value) * 100
+            : (value / target) * 100;
+
+        compliance = Math.max(0, Math.min(100, compliance));
+
+        const weight = indicator.weight ?? 1;
+        weightedSum += compliance * weight;
+        totalWeight += weight;
+      }
+
+      const score =
+        totalWeight > 0
+          ? Math.round(weightedSum / totalWeight)
+          : null;
+
+      result.push({
+        objectiveId: objective.id,
+        objectiveCode: objective.code,
+        objectiveName: objective.name,
+        score,
+      });
+    }
+
+    return result;
   }
 }
