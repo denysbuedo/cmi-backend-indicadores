@@ -3,18 +3,18 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // =====================================================
   // BASIC SUMMARY
   // =====================================================
   async getSummary(tenantId: string) {
     const totalIndicators = await this.prisma.indicator.count({
-      where: { tenantId },
+      where: { tenantId, active: true },
     });
 
     const indicators = await this.prisma.indicator.findMany({
-      where: { tenantId },
+      where: { tenantId, active: true },
       include: {
         values: {
           orderBy: { periodEnd: 'desc' },
@@ -140,11 +140,11 @@ export class DashboardService {
   }
 
   // =====================================================
-  // EXECUTIVE DASHBOARD
+  // EXECUTIVE DASHBOARD (PONDERADO)
   // =====================================================
   async getExecutiveDashboard(tenantId: string) {
     const indicators = await this.prisma.indicator.findMany({
-      where: { tenantId },
+      where: { tenantId, active: true },
       include: {
         values: {
           orderBy: { periodEnd: 'desc' },
@@ -157,6 +157,9 @@ export class DashboardService {
     let warning = 0;
     let critical = 0;
 
+    let weightedSum = 0;
+    let totalWeight = 0;
+
     const detailed = indicators.map((indicator) => {
       const latest = indicator.values[0];
       const previous = indicator.values[1];
@@ -167,6 +170,7 @@ export class DashboardService {
           code: indicator.code,
           name: indicator.name,
           unit: indicator.unit,
+          weight: indicator.weight ?? 1,
           latestValue: null,
           target: null,
           compliancePercent: null,
@@ -181,34 +185,47 @@ export class DashboardService {
 
       const latestValue = Number(latest.value);
       const target = latest.target ? Number(latest.target) : null;
+      const weight = indicator.weight ?? 1;
 
-      // Compliance %
+      // =========================
+      // COMPLIANCE %
+      // =========================
       let compliancePercent: number | null = null;
+
       if (target && target !== 0) {
         compliancePercent = (latestValue / target) * 100;
+
+        weightedSum += compliancePercent * weight;
+        totalWeight += weight;
       }
 
-      // Variation %
+      // =========================
+      // VARIATION %
+      // =========================
       let variationPercent: number | null = null;
       let trend = 'STABLE';
 
       if (previous) {
         const prevValue = Number(previous.value);
+
         if (prevValue !== 0) {
-          variationPercent =
-            ((latestValue - prevValue) / prevValue) * 100;
+          variationPercent = ((latestValue - prevValue) / prevValue) * 100;
         }
 
         if (latestValue > prevValue) trend = 'UP';
         if (latestValue < prevValue) trend = 'DOWN';
       }
 
-      // Status counters
+      // =========================
+      // STATUS COUNTERS
+      // =========================
       if (latest.status === 'OK') ok++;
       if (latest.status === 'WARNING') warning++;
       if (latest.status === 'CRITICAL') critical++;
 
-      // History (last 6 periods)
+      // =========================
+      // HISTORY
+      // =========================
       const history = indicator.values.map((v) => ({
         periodEnd: v.periodEnd,
         value: Number(v.value),
@@ -221,6 +238,7 @@ export class DashboardService {
         code: indicator.code,
         name: indicator.name,
         unit: indicator.unit,
+        weight,
         latestValue,
         target,
         compliancePercent,
@@ -233,7 +251,9 @@ export class DashboardService {
       };
     });
 
-    // Order by criticality
+    // =========================
+    // ORDER BY PRIORITY
+    // =========================
     const priority: Record<string, number> = {
       CRITICAL: 1,
       WARNING: 2,
@@ -247,19 +267,17 @@ export class DashboardService {
         (priority[b.status] || 5),
     );
 
-    // Executive Score (0–100)
-    const complianceValues = detailed
-      .filter((i) => i.compliancePercent !== null)
-      .map((i) => i.compliancePercent as number);
-
+    // =========================
+    // EXECUTIVE SCORE (PONDERADO)
+    // =========================
     let executiveScore: number | null = null;
 
-    if (complianceValues.length > 0) {
-      const avg =
-        complianceValues.reduce((a, b) => a + b, 0) /
-        complianceValues.length;
+    if (totalWeight > 0) {
+      const avg = weightedSum / totalWeight;
 
-      executiveScore = Math.round(Math.min(avg, 100));
+      executiveScore = Math.round(
+        Math.min(avg, 100),
+      );
     }
 
     return {
