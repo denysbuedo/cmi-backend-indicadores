@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // =====================================================
   // BASIC SUMMARY
@@ -249,7 +249,7 @@ export class DashboardService {
         (acc, i) =>
           acc +
           (i.compliancePercent as number) *
-            (i.weight ?? 1),
+          (i.weight ?? 1),
         0,
       );
 
@@ -276,58 +276,7 @@ export class DashboardService {
   }
 
   // =====================================================
-  // PROCESS HEATMAP
-  // =====================================================
-  async getProcessHeatmap(tenantId: string) {
-    const processes = await this.prisma.process.findMany({
-      where: { tenantId },
-      include: {
-        indicators: {
-          where: { active: true },
-          include: {
-            values: {
-              orderBy: { periodEnd: 'desc' },
-              take: 1,
-            },
-          },
-        },
-      },
-    });
-
-    return processes.map((process) => {
-      let weightedSum = 0;
-      let totalWeight = 0;
-
-      for (const indicator of process.indicators) {
-        const latest = indicator.values[0];
-        if (!latest || !latest.target) continue;
-
-        const value = Number(latest.value);
-        const target = Number(latest.target);
-
-        let compliance =
-          indicator.evaluationDirection === 'HIGHER_IS_BETTER'
-            ? (value / target) * 100
-            : (target / value) * 100;
-
-        compliance = Math.min(compliance, 100);
-
-        weightedSum += compliance * (indicator.weight ?? 1);
-        totalWeight += indicator.weight ?? 1;
-      }
-
-      return {
-        process: process.name,
-        executiveScore:
-          totalWeight > 0
-            ? Math.round(weightedSum / totalWeight)
-            : null,
-      };
-    });
-  }
-
-  // =====================================================
-  // OBJECTIVE SCORES
+  // OBJECTIVE SCORES – EXECUTIVE VERSION
   // =====================================================
   async getObjectiveScores(tenantId: string) {
     const objectives = await this.prisma.objective.findMany({
@@ -352,10 +301,21 @@ export class DashboardService {
       let weightedSum = 0;
       let totalWeight = 0;
 
+      let ok = 0;
+      let warning = 0;
+      let critical = 0;
+      let totalIndicators = 0;
+
       for (const link of objective.indicators) {
         const indicator = link.indicator;
+
+        // 🔥 FILTRAMOS AQUÍ, NO EN PRISMA INCLUDE
+        if (!indicator.active) continue;
+
         const latest = indicator.values[0];
         if (!latest || !latest.target) continue;
+
+        totalIndicators++;
 
         const value = Number(latest.value);
         const target = Number(latest.target);
@@ -369,14 +329,32 @@ export class DashboardService {
 
         weightedSum += compliance * (indicator.weight ?? 1);
         totalWeight += indicator.weight ?? 1;
+
+        if (latest.status === 'OK') ok++;
+        if (latest.status === 'WARNING') warning++;
+        if (latest.status === 'CRITICAL') critical++;
       }
 
+      const executiveScore =
+        totalWeight > 0
+          ? Math.round(weightedSum / totalWeight)
+          : null;
+
+      let status: string = 'NO_DATA';
+
+      if (critical > 0) status = 'CRITICAL';
+      else if (warning > 0) status = 'WARNING';
+      else if (ok > 0) status = 'OK';
+
       return {
-        objective: objective.name,
-        executiveScore:
-          totalWeight > 0
-            ? Math.round(weightedSum / totalWeight)
-            : null,
+        objectiveId: objective.id,
+        objectiveName: objective.name,
+        executiveScore,
+        ok,
+        warning,
+        critical,
+        totalIndicators,
+        status,
       };
     });
   }
