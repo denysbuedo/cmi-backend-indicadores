@@ -4,80 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SourceRole } from '@prisma/client';
 
-import { CreateIndicatorTypeDto } from './dto/create-indicator-type.dto';
-import { CreateProcessDto } from './dto/create-process.dto';
-import { CreateObjectiveDto } from './dto/create-objective.dto';
 import { CreateIndicatorDto } from './dto/create-indicator.dto';
+import { UpdateIndicatorDto } from './dto/update-indicator.dto';
 
 @Injectable()
 export class IndicatorsService {
   constructor(private prisma: PrismaService) {}
 
-  // ------------------------------------------------
-  // Indicator Types
-  // ------------------------------------------------
-
-  async createIndicatorType(tenantId: string, dto: CreateIndicatorTypeDto) {
-    return this.prisma.indicatorType.create({
-      data: {
-        ...dto,
-        tenantId,
-      },
-    });
-  }
-
-  async findAllIndicatorTypes(tenantId: string) {
-    return this.prisma.indicatorType.findMany({
-      where: { tenantId },
-      orderBy: { name: 'asc' },
-    });
-  }
-
-  // ------------------------------------------------
-  // Processes
-  // ------------------------------------------------
-
-  async createProcess(tenantId: string, dto: CreateProcessDto) {
-    return this.prisma.process.create({
-      data: {
-        ...dto,
-        tenantId,
-      },
-    });
-  }
-
-  async findAllProcesses(tenantId: string) {
-    return this.prisma.process.findMany({
-      where: { tenantId },
-      orderBy: { name: 'asc' },
-    });
-  }
-
-  // ------------------------------------------------
-  // Objectives
-  // ------------------------------------------------
-
-  async createObjective(tenantId: string, dto: CreateObjectiveDto) {
-    return this.prisma.objective.create({
-      data: {
-        ...dto,
-        tenantId,
-      },
-    });
-  }
-
-  async findAllObjectives(tenantId: string) {
-    return this.prisma.objective.findMany({
-      where: { tenantId },
-      orderBy: { name: 'asc' },
-    });
-  }
-
-  // ------------------------------------------------
-  // Indicators
-  // ------------------------------------------------
-
+  // CREATE
   async createIndicator(tenantId: string, dto: CreateIndicatorDto) {
     const { objectiveIds, ...indicatorData } = dto;
 
@@ -94,9 +30,13 @@ export class IndicatorsService {
     });
   }
 
+  // FIND ALL
   async findAllIndicators(tenantId: string) {
     return this.prisma.indicator.findMany({
-      where: { tenantId },
+      where: {
+        tenantId,
+        deletedAt: null,
+      },
       include: {
         indicatorType: true,
         process: true,
@@ -114,23 +54,61 @@ export class IndicatorsService {
     });
   }
 
-  // ------------------------------------------------
-  // Attach Source
-  // ------------------------------------------------
-
-  async attachSource(
-    tenantId: string,
-    indicatorId: string,
-    sourceId: string,
-    role: any,
-  ) {
+  // FIND ONE
+  async findOne(tenantId: string, id: string) {
     const indicator = await this.prisma.indicator.findFirst({
-      where: { id: indicatorId, tenantId },
+      where: {
+        id,
+        tenantId,
+        deletedAt: null,
+      },
     });
 
     if (!indicator) {
       throw new NotFoundException('Indicator not found');
     }
+
+    return indicator;
+  }
+
+  // UPDATE
+  async updateIndicator(
+    tenantId: string,
+    id: string,
+    dto: UpdateIndicatorDto,
+  ) {
+    await this.findOne(tenantId, id);
+
+    return this.prisma.indicator.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  // SOFT DELETE
+  async softDeleteIndicator(
+    tenantId: string,
+    id: string,
+  ) {
+    await this.findOne(tenantId, id);
+
+    return this.prisma.indicator.update({
+      where: { id },
+      data: {
+        active: false,
+        deletedAt: new Date(),
+      },
+    });
+  }
+
+  // ATTACH SOURCE
+  async attachSource(
+    tenantId: string,
+    indicatorId: string,
+    sourceId: string,
+    role: SourceRole,
+  ) {
+    await this.findOne(tenantId, indicatorId);
 
     return this.prisma.indicatorSource.create({
       data: {
@@ -141,89 +119,74 @@ export class IndicatorsService {
     });
   }
 
-  // ------------------------------------------------
-  // Indicator Values
-  // ------------------------------------------------
-
+  // CREATE VALUE
   async createIndicatorValue(
-  tenantId: string,
-  indicatorId: string,
-  dto: {
-    value: number;
-    target?: number;
-    periodStart: string;
-    periodEnd: string;
-  },
-) {
-  const start = new Date(dto.periodStart);
-  const end = new Date(dto.periodEnd);
-
-  if (start > end) {
-    throw new BadRequestException(
-      'periodStart must be before periodEnd',
-    );
-  }
-
-  const indicator = await this.prisma.indicator.findFirst({
-    where: { id: indicatorId, tenantId },
-  });
-
-  if (!indicator) {
-    throw new NotFoundException('Indicator not found');
-  }
-
-  // Verificar superposición
-  const overlapping = await this.prisma.indicatorValue.findFirst({
-    where: {
-      indicatorId,
-      tenantId,
-      AND: [
-        { periodStart: { lte: end } },
-        { periodEnd: { gte: start } },
-      ],
+    tenantId: string,
+    indicatorId: string,
+    dto: {
+      value: number;
+      target?: number;
+      periodStart: string;
+      periodEnd: string;
     },
-  });
+  ) {
+    const start = new Date(dto.periodStart);
+    const end = new Date(dto.periodEnd);
 
-  if (overlapping) {
-    throw new BadRequestException(
-      'Period overlaps with existing record',
-    );
-  }
-
-  // -----------------------------
-  // Cálculo automático de estado
-  // -----------------------------
-
-  let status: 'OK' | 'WARNING' | 'CRITICAL' = 'OK';
-  const value = Number(dto.value);
-
-  if (dto.target !== undefined && dto.target !== null) {
-    const target = Number(dto.target);
-
-    if (value >= target) {
-      status = 'OK';
-    } else if (value >= target * 0.9) {
-      status = 'WARNING';
-    } else {
-      status = 'CRITICAL';
+    if (start > end) {
+      throw new BadRequestException(
+        'periodStart must be before periodEnd',
+      );
     }
+
+    await this.findOne(tenantId, indicatorId);
+
+    const overlapping = await this.prisma.indicatorValue.findFirst({
+      where: {
+        indicatorId,
+        tenantId,
+        AND: [
+          { periodStart: { lte: end } },
+          { periodEnd: { gte: start } },
+        ],
+      },
+    });
+
+    if (overlapping) {
+      throw new BadRequestException(
+        'Period overlaps with existing record',
+      );
+    }
+
+    let status: 'OK' | 'WARNING' | 'CRITICAL' = 'OK';
+    const value = Number(dto.value);
+
+    if (dto.target !== undefined && dto.target !== null) {
+      const target = Number(dto.target);
+
+      if (value >= target) status = 'OK';
+      else if (value >= target * 0.9) status = 'WARNING';
+      else status = 'CRITICAL';
+    }
+
+    return this.prisma.indicatorValue.create({
+      data: {
+        indicatorId,
+        tenantId,
+        value,
+        target: dto.target ?? null,
+        periodStart: start,
+        periodEnd: end,
+        status,
+      },
+    });
   }
 
-  return this.prisma.indicatorValue.create({
-    data: {
-      indicatorId,
-      tenantId,
-      value,
-      target: dto.target ?? null,
-      periodStart: start,
-      periodEnd: end,
-      status,
-    },
-  });
-}
-
-
-  async getIndicatorHistory(tenantId: string, indicatorId: string) {
+  // HISTORY
+  async getIndicatorHistory(
+    tenantId: string,
+    indicatorId: string,
+  ) {
     return this.prisma.indicatorValue.findMany({
       where: {
         indicatorId,

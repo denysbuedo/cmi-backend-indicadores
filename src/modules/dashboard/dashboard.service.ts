@@ -3,14 +3,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   // =====================================================
   // SUMMARY
   // =====================================================
   async getSummary(tenantId: string) {
     const indicators = await this.prisma.indicator.findMany({
-      where: { tenantId, active: true },
+      where: { tenantId, deletedAt: null },
       include: {
         values: {
           orderBy: { periodEnd: 'desc' },
@@ -47,7 +47,7 @@ export class DashboardService {
     const now = new Date();
 
     const indicators = await this.prisma.indicator.findMany({
-      where: { tenantId, active: true },
+      where: { tenantId, deletedAt: null },
       include: {
         values: {
           orderBy: { periodEnd: 'desc' },
@@ -56,12 +56,7 @@ export class DashboardService {
       },
     });
 
-    const result: {
-      id: string;
-      code: string;
-      name: string;
-      expectedNextUpdate: Date;
-    }[] = [];
+    const result: any[] = [];
 
     for (const indicator of indicators) {
       const latest = indicator.values[0];
@@ -118,15 +113,16 @@ export class DashboardService {
     };
   }
 
+  // =====================================================
+  // EXECUTIVE DASHBOARD
+  // =====================================================
   async getExecutiveDashboard(tenantId: string) {
     const indicators = await this.prisma.indicator.findMany({
-      where: { tenantId, active: true },
+      where: { tenantId, deletedAt: null },
       include: {
         process: true,
         objectives: {
-          include: {
-            objective: true,
-          },
+          include: { objective: true },
         },
         values: {
           orderBy: { periodEnd: 'desc' },
@@ -147,25 +143,11 @@ export class DashboardService {
           code: indicator.code,
           name: indicator.name,
           unit: indicator.unit,
-
           processId: indicator.process.id,
-          processCode: indicator.process.code,
           processName: indicator.process.name,
-
-          objectives: indicator.objectives.map((o) => ({
-            objectiveId: o.objective.id,
-            objectiveCode: o.objective.code,
-            objectiveName: o.objective.name,
-          })),
-
           latestValue: null,
-          target: null,
           compliancePercent: null,
-          previousValue: null,
-          variationPercent: null,
-          trend: 'NO_DATA',
           status: 'NO_DATA',
-          lastUpdate: null,
           history: [],
         };
       }
@@ -190,20 +172,6 @@ export class DashboardService {
         totalWeight += weight;
       }
 
-      let variationPercent: number | null = null;
-      let trend = 'STABLE';
-
-      if (previous) {
-        const prevValue = Number(previous.value);
-        if (prevValue !== 0) {
-          variationPercent =
-            ((value - prevValue) / prevValue) * 100;
-        }
-
-        if (value > prevValue) trend = 'UP';
-        if (value < prevValue) trend = 'DOWN';
-      }
-
       const history = indicator.values
         .slice()
         .sort(
@@ -222,27 +190,11 @@ export class DashboardService {
         code: indicator.code,
         name: indicator.name,
         unit: indicator.unit,
-
         processId: indicator.process.id,
-        processCode: indicator.process.code,
         processName: indicator.process.name,
-
-        objectives: indicator.objectives.map((o) => ({
-          objectiveId: o.objective.id,
-          objectiveCode: o.objective.code,
-          objectiveName: o.objective.name,
-        })),
-
         latestValue: value,
-        target,
         compliancePercent: compliance,
-        previousValue: previous
-          ? Number(previous.value)
-          : null,
-        variationPercent,
-        trend,
         status: latest.status,
-        lastUpdate: latest.periodEnd,
         history,
       };
     });
@@ -252,22 +204,9 @@ export class DashboardService {
         ? Math.round(weightedSum / totalWeight)
         : null;
 
-    let ok = 0;
-    let warning = 0;
-    let critical = 0;
-
-    for (const i of detailed) {
-      if (i.status === 'OK') ok++;
-      if (i.status === 'WARNING') warning++;
-      if (i.status === 'CRITICAL') critical++;
-    }
-
     return {
       summary: {
         totalIndicators: detailed.length,
-        ok,
-        warning,
-        critical,
       },
       executiveScore,
       indicators: detailed,
@@ -279,10 +218,10 @@ export class DashboardService {
   // =====================================================
   async getProcessHeatmap(tenantId: string) {
     const processes = await this.prisma.process.findMany({
-      where: { tenantId, active: true },
+      where: { tenantId, deletedAt: null },
       include: {
         indicators: {
-          where: { active: true },
+          where: { deletedAt: null },
           include: {
             values: {
               orderBy: { periodEnd: 'desc' },
@@ -293,13 +232,7 @@ export class DashboardService {
       },
     });
 
-    const result: {
-      processId: string;
-      processCode: string;
-      processName: string;
-      score: number | null;
-      status: 'OK' | 'WARNING' | 'CRITICAL' | 'NO_DATA';
-    }[] = [];
+    const result: any[] = [];
 
     for (const process of processes) {
       let weightedSum = 0;
@@ -311,8 +244,6 @@ export class DashboardService {
 
         const value = Number(latest.value);
         const target = Number(latest.target);
-
-        if (target === 0) continue;
 
         let compliance =
           indicator.evaluationDirection === 'LOWER_IS_BETTER'
@@ -331,21 +262,11 @@ export class DashboardService {
           ? Math.round(weightedSum / totalWeight)
           : null;
 
-      let status: 'OK' | 'WARNING' | 'CRITICAL' | 'NO_DATA' =
-        'NO_DATA';
-
-      if (score !== null) {
-        if (score >= 80) status = 'OK';
-        else if (score >= 60) status = 'WARNING';
-        else status = 'CRITICAL';
-      }
-
       result.push({
         processId: process.id,
         processCode: process.code,
         processName: process.name,
         score,
-        status,
       });
     }
 
@@ -357,7 +278,7 @@ export class DashboardService {
   // =====================================================
   async getObjectiveScores(tenantId: string) {
     const objectives = await this.prisma.objective.findMany({
-      where: { tenantId, active: true },
+      where: { tenantId, deletedAt: null },
       include: {
         indicators: {
           include: {
@@ -374,12 +295,7 @@ export class DashboardService {
       },
     });
 
-    const result: {
-      objectiveId: string;
-      objectiveCode: string;
-      objectiveName: string;
-      score: number | null;
-    }[] = [];
+    const result: any[] = [];
 
     for (const objective of objectives) {
       let weightedSum = 0;
@@ -388,13 +304,10 @@ export class DashboardService {
       for (const link of objective.indicators) {
         const indicator = link.indicator;
         const latest = indicator.values[0];
-
         if (!latest || !latest.target) continue;
 
         const value = Number(latest.value);
         const target = Number(latest.target);
-
-        if (target === 0) continue;
 
         let compliance =
           indicator.evaluationDirection === 'LOWER_IS_BETTER'
