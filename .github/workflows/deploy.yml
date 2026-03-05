@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd cmi-backend-indicadores
-          npm ci
+          npm install
 
       - name: Build
         run: |
