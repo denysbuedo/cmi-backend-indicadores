@@ -19,14 +19,10 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: |
-          cd cmi-backend-indicadores
-          npm install
+        run: npm install
 
       - name: Build
-        run: |
-          cd cmi-backend-indicadores
-          npm run build
+        run: npm run build
 
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@master
