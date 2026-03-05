@@ -1,6 +1,7 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateObjectiveDto } from './dto/create-objective.dto';
@@ -10,8 +11,35 @@ import { UpdateObjectiveDto } from './dto/update-objective.dto';
 export class ObjectiveService {
   constructor(private prisma: PrismaService) {}
 
+  // =====================================================
   // CREATE
+  // =====================================================
+
   async create(tenantId: string, dto: CreateObjectiveDto) {
+    const existing = await this.prisma.objective.findFirst({
+      where: {
+        tenantId,
+        code: dto.code,
+      },
+    });
+
+    if (existing) {
+      if (existing.deletedAt) {
+        return this.prisma.objective.update({
+          where: { id: existing.id },
+          data: {
+            name: dto.name,
+            active: true,
+            deletedAt: null,
+          },
+        });
+      }
+
+      throw new BadRequestException(
+        'Objective code already exists',
+      );
+    }
+
     return this.prisma.objective.create({
       data: {
         ...dto,
@@ -20,7 +48,10 @@ export class ObjectiveService {
     });
   }
 
+  // =====================================================
   // FIND ALL
+  // =====================================================
+
   async findAll(tenantId: string) {
     return this.prisma.objective.findMany({
       where: {
@@ -31,7 +62,10 @@ export class ObjectiveService {
     });
   }
 
+  // =====================================================
   // FIND ONE
+  // =====================================================
+
   async findOne(tenantId: string, id: string) {
     const objective = await this.prisma.objective.findFirst({
       where: {
@@ -48,7 +82,10 @@ export class ObjectiveService {
     return objective;
   }
 
+  // =====================================================
   // UPDATE
+  // =====================================================
+
   async update(
     tenantId: string,
     id: string,
@@ -62,18 +99,34 @@ export class ObjectiveService {
     });
   }
 
+  // =====================================================
+  // TOGGLE ACTIVE
+  // =====================================================
+
+  async toggleActive(tenantId: string, id: string) {
+    const objective = await this.findOne(tenantId, id);
+
+    return this.prisma.objective.update({
+      where: { id: objective.id },
+      data: {
+        active: !objective.active,
+      },
+    });
+  }
+
+  // =====================================================
   // SOFT DELETE
+  // =====================================================
+
   async remove(tenantId: string, id: string) {
     const objective = await this.findOne(tenantId, id);
 
-    await this.prisma.objective.update({
+    return this.prisma.objective.update({
       where: { id: objective.id },
       data: {
         active: false,
         deletedAt: new Date(),
       },
     });
-
-    return { message: 'Objective soft deleted successfully' };
   }
 }

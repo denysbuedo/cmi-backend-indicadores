@@ -1,0 +1,652 @@
+{
+  "info": {
+    "name": "CMI Backend - Executive KPI Engine",
+    "description": "Colección completa para probar la API del CMI Backend con todos los endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "tenantId",
+      "value": "",
+      "type": "string",
+      "description": "UUID del tenant (obtener del endpoint GET /tenants o del seed)"
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "🏠 Dashboard Ejecutivo",
+      "item": [
+        {
+          "name": "Dashboard Ejecutivo Completo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/executive",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "executive"]
+            },
+            "description": "Retorna el dashboard ejecutivo completo con Executive Score, lista de indicadores ordenados por criticidad, tendencia, cumplimiento y variación."
+          },
+          "response": []
+        },
+        {
+          "name": "Resumen Global",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "summary"]
+            },
+            "description": "Resumen global de todos los indicadores del tenant."
+          },
+          "response": []
+        },
+        {
+          "name": "Indicadores Vencidos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/overdue",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "overdue"]
+            },
+            "description": "Lista de indicadores que están vencidos o pendientes de ejecución."
+          },
+          "response": []
+        },
+        {
+          "name": "Estadísticas de Ejecución",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/execution-stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "execution-stats"]
+            },
+            "description": "Estadísticas detalladas sobre las ejecuciones de indicadores."
+          },
+          "response": []
+        },
+        {
+          "name": "Heatmap por Proceso",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/process-heatmap",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "process-heatmap"]
+            },
+            "description": "Heatmap de indicadores agrupados por proceso."
+          },
+          "response": []
+        },
+        {
+          "name": "Puntuación por Objetivo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/objective-scores",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "objective-scores"]
+            },
+            "description": "Puntuación de cumplimiento por cada objetivo estratégico."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 Indicadores",
+      "item": [
+        {
+          "name": "Listar Todos los Indicadores",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/indicators",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicators"]
+            },
+            "description": "Lista todos los indicadores del tenant."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener Indicador por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/indicators/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicators", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "REPLACE_WITH_INDICATOR_ID"
+                }
+              ]
+            },
+            "description": "Obtiene un indicador específico por su UUID."
+          },
+          "response": []
+        },
+        {
+          "name": "Historial de Indicador",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/indicators/:id/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicators", ":id", "history"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "REPLACE_WITH_INDICATOR_ID"
+                }
+              ]
+            },
+            "description": "Historial de valores del indicador (últimos 6 periodos)."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Indicador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"NEW_KPI\",\n  \"name\": \"Nuevo KPI de Ejemplo\",\n  \"description\": \"Descripción del nuevo indicador\",\n  \"unit\": \"PERCENT\",\n  \"decimals\": 1,\n  \"weight\": 3,\n  \"frequencyMonths\": 12,\n  \"evaluationDirection\": \"HIGHER_IS_BETTER\",\n  \"processId\": \"REPLACE_WITH_PROCESS_ID\",\n  \"indicatorTypeId\": \"REPLACE_WITH_INDICATOR_TYPE_ID\",\n  \"objectives\": [\"REPLACE_WITH_OBJECTIVE_ID\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/indicators",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicators"]
+            },
+            "description": "Crea un nuevo indicador. Unit: NUMBER o PERCENT. EvaluationDirection: HIGHER_IS_BETTER o LOWER_IS_BETTER."
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar Indicador",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nombre Actualizado\",\n  \"weight\": 5,\n  \"description\": \"Nueva descripción\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/indicators/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicators", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "REPLACE_WITH_INDICATOR_ID"
+                }
+              ]
+            },
+            "description": "Actualiza campos específicos de un indicador."
+          },
+          "response": []
+        },
+        {
+          "name": "Activar/Desactivar Indicador",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/indicators/:id/toggle",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicators", ":id", "toggle"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "REPLACE_WITH_INDICATOR_ID"
+                }
+              ]
+            },
+            "description": "Cambia el estado activo/inactivo del indicador."
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar Indicador (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/indicators/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicators", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "REPLACE_WITH_INDICATOR_ID"
+                }
+              ]
+            },
+            "description": "Elimina lógicamente un indicador (soft delete)."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Valor de Indicador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": 85.5,\n  \"target\": 90,\n  \"periodStart\": \"2026-01-01T00:00:00Z\",\n  \"periodEnd\": \"2026-12-31T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/indicators/:id/values",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicators", ":id", "values"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "REPLACE_WITH_INDICATOR_ID"
+                }
+              ]
+            },
+            "description": "Crea un nuevo valor/registro para un indicador en un periodo específico."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "⚡ Ejecución",
+      "item": [
+        {
+          "name": "Ejecutar Indicador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/execution/indicator/:id/run",
+              "host": ["{{baseUrl}}"],
+              "path": ["execution", "indicator", ":id", "run"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "REPLACE_WITH_INDICATOR_ID"
+                }
+              ]
+            },
+            "description": "Ejecuta manualmente un indicador para obtener su valor actual. El sistema calcula automáticamente el estado, tendencia y cumplimiento."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📁 Procesos",
+      "item": [
+        {
+          "name": "Listar Procesos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/processes",
+              "host": ["{{baseUrl}}"],
+              "path": ["processes"]
+            },
+            "description": "Lista todos los procesos del tenant (QA, DEV, OPS, etc.)."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Proceso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"HR\",\n  \"name\": \"Recursos Humanos\",\n  \"description\": \"Proceso de gestión de talento humano\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/processes",
+              "host": ["{{baseUrl}}"],
+              "path": ["processes"]
+            },
+            "description": "Crea un nuevo proceso."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🎯 Objetivos",
+      "item": [
+        {
+          "name": "Listar Objetivos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/objectives",
+              "host": ["{{baseUrl}}"],
+              "path": ["objectives"]
+            },
+            "description": "Lista todos los objetivos estratégicos del tenant."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Objetivo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"NEW_OBJECTIVE\",\n  \"name\": \"Nuevo Objetivo Estratégico\",\n  \"description\": \"Descripción del objetivo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/objectives",
+              "host": ["{{baseUrl}}"],
+              "path": ["objectives"]
+            },
+            "description": "Crea un nuevo objetivo estratégico."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏷️ Tipos de Indicador",
+      "item": [
+        {
+          "name": "Listar Tipos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/indicator-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicator-types"]
+            },
+            "description": "Lista todos los tipos de indicador (Esencial, Estratégico, etc.)."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Tipo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"TACTICAL\",\n  \"name\": \"Táctico\",\n  \"description\": \"Indicadores de nivel táctico\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/indicator-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["indicator-types"]
+            },
+            "description": "Crea un nuevo tipo de indicador."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔗 Fuentes de Datos",
+      "item": [
+        {
+          "name": "Listar Fuentes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sources",
+              "host": ["{{baseUrl}}"],
+              "path": ["sources"]
+            },
+            "description": "Lista todas las fuentes de datos configuradas."
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Fuente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-tenant-id",
+                "value": "{{tenantId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"API GitHub\",\n  \"description\": \"Conexión a API de GitHub para métricas\",\n  \"endpoint\": \"https://api.github.com/repos/{owner}/{repo}/stats\",\n  \"method\": \"GET\",\n  \"headers\": {\n    \"Authorization\": \"Bearer {{TOKEN}}\"\n  },\n  \"timeout\": 5000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sources",
+              "host": ["{{baseUrl}}"],
+              "path": ["sources"]
+            },
+            "description": "Crea una nueva fuente de datos externa (API, webhook, etc.)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔧 Utilidades",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verifica que el servidor esté funcionando."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener Tenant ID (Post-Seed)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://console.cloud.google.com/sql/instances",
+              "host": ["console.cloud.google.com"],
+              "path": ["sql", "instances"]
+            },
+            "description": "Después de ejecutar el seed, consulta la BD para obtener el UUID del tenant 'MES'. Actualiza la variable {{tenantId}} con ese valor."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

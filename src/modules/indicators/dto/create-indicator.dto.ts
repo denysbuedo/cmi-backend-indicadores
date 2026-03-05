@@ -1,13 +1,13 @@
 import {
-  IsArray,
-  IsEnum,
-  IsInt,
-  IsOptional,
   IsString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
   IsUUID,
+  IsArray,
   Min,
 } from 'class-validator';
-import { IndicatorUnit } from '@prisma/client';
+import { IndicatorUnit, EvaluationDirection } from '@prisma/client';
 
 export class CreateIndicatorDto {
   @IsString()
@@ -23,28 +23,32 @@ export class CreateIndicatorDto {
   @IsEnum(IndicatorUnit)
   unit: IndicatorUnit;
 
-  @IsInt()
+  @IsNumber()
   @Min(0)
   decimals: number;
 
-  // 🔹 NUEVO
+  @IsNumber()
+  @Min(0)
+  weight: number;
+
+  @IsEnum(EvaluationDirection)
+  evaluationDirection: EvaluationDirection;
+
   @IsOptional()
-  @IsInt()
-  @Min(1)
+  @IsNumber()
   frequencyMonths?: number;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
+  @IsNumber()
   frequencyDays?: number;
-
-  @IsUUID()
-  indicatorTypeId: string;
 
   @IsUUID()
   processId: string;
 
+  @IsUUID()
+  indicatorTypeId: string;
+
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsUUID("4", { each: true })
   objectiveIds: string[];
 }

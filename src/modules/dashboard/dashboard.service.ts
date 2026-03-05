@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // =====================================================
   // SUMMARY
@@ -114,7 +114,7 @@ export class DashboardService {
   }
 
   // =====================================================
-  // EXECUTIVE DASHBOARD
+  // EXECUTIVE DASHBOARD (UPDATED WITH OBJECTIVES)
   // =====================================================
   async getExecutiveDashboard(tenantId: string) {
     const indicators = await this.prisma.indicator.findMany({
@@ -143,8 +143,12 @@ export class DashboardService {
           code: indicator.code,
           name: indicator.name,
           unit: indicator.unit,
+          weight: indicator.weight,
+          objectives: indicator.objectives,
+
           processId: indicator.process.id,
           processName: indicator.process.name,
+
           latestValue: null,
           compliancePercent: null,
           status: 'NO_DATA',
@@ -163,7 +167,8 @@ export class DashboardService {
             ? (target / value) * 100
             : (value / target) * 100;
 
-        compliance = Math.max(0, Math.min(100, compliance));
+        // 🔥 Permitimos sobrecumplimiento
+        compliance = Math.max(0, compliance);
       }
 
       if (compliance !== null) {
@@ -190,8 +195,12 @@ export class DashboardService {
         code: indicator.code,
         name: indicator.name,
         unit: indicator.unit,
+        weight: indicator.weight,
+        objectives: indicator.objectives, // 🔥 IMPORTANTE
+
         processId: indicator.process.id,
         processName: indicator.process.name,
+
         latestValue: value,
         compliancePercent: compliance,
         status: latest.status,
@@ -201,7 +210,7 @@ export class DashboardService {
 
     const executiveScore =
       totalWeight > 0
-        ? Math.round(weightedSum / totalWeight)
+        ? Number((weightedSum / totalWeight).toFixed(2))
         : null;
 
     return {
@@ -212,7 +221,6 @@ export class DashboardService {
       indicators: detailed,
     };
   }
-
   // =====================================================
   // PROCESS HEATMAP
   // =====================================================
@@ -225,7 +233,7 @@ export class DashboardService {
           include: {
             values: {
               orderBy: { periodEnd: 'desc' },
-              take: 1,
+              take: 2, // 🔥 para tendencia
             },
           },
         },
@@ -238,9 +246,21 @@ export class DashboardService {
       let weightedSum = 0;
       let totalWeight = 0;
 
+      let okCount = 0;
+      let evaluableCount = 0;
+      let noDataCount = 0;
+
+      let variationAccumulator = 0;
+      let variationCount = 0;
+
       for (const indicator of process.indicators) {
         const latest = indicator.values[0];
-        if (!latest || !latest.target) continue;
+        const previous = indicator.values[1];
+
+        if (!latest || !latest.target) {
+          noDataCount++;
+          continue;
+        }
 
         const value = Number(latest.value);
         const target = Number(latest.target);
@@ -250,23 +270,74 @@ export class DashboardService {
             ? (target / value) * 100
             : (value / target) * 100;
 
-        compliance = Math.max(0, Math.min(100, compliance));
+        compliance = Math.max(0, compliance); // 🔥 permitimos sobrecumplimiento
 
         const weight = indicator.weight ?? 1;
+
         weightedSum += compliance * weight;
         totalWeight += weight;
+
+        evaluableCount++;
+
+        if (latest.status === 'OK') okCount++;
+
+        // 🔥 tendencia
+        if (
+          previous &&
+          previous.value != null &&
+          Number(previous.value) !== 0
+        ) {
+          const variation =
+            ((Number(latest.value) - Number(previous.value)) /
+              Number(previous.value)) *
+            100;
+
+          variationAccumulator += variation;
+          variationCount++;
+        }
       }
 
       const score =
         totalWeight > 0
-          ? Math.round(weightedSum / totalWeight)
+          ? weightedSum / totalWeight
           : null;
+
+      const okPercent =
+        evaluableCount > 0
+          ? (okCount / evaluableCount) * 100
+          : 0;
+
+      const avgVariation =
+        variationCount > 0
+          ? variationAccumulator / variationCount
+          : null;
+
+      let status: string = 'NO_DATA';
+
+      if (score !== null) {
+        if (score >= 80) status = 'OK';
+        else if (score >= 60) status = 'WARNING';
+        else status = 'CRITICAL';
+      }
 
       result.push({
         processId: process.id,
         processCode: process.code,
         processName: process.name,
         score,
+        status,
+        indicatorCount: process.indicators.length,
+        evaluableCount,
+        noDataCount,
+        okPercent,
+        trend:
+          avgVariation == null
+            ? 'FLAT'
+            : avgVariation > 0
+              ? 'UP'
+              : avgVariation < 0
+                ? 'DOWN'
+                : 'FLAT',
       });
     }
 
@@ -274,7 +345,7 @@ export class DashboardService {
   }
 
   // =====================================================
-  // OBJECTIVE SCORES
+  // OBJECTIVE SCORES (Enterprise - Clean Counts)
   // =====================================================
   async getObjectiveScores(tenantId: string) {
     const objectives = await this.prisma.objective.findMany({
@@ -286,7 +357,7 @@ export class DashboardService {
               include: {
                 values: {
                   orderBy: { periodEnd: 'desc' },
-                  take: 1,
+                  take: 2, // 👈 necesitamos 2 períodos
                 },
               },
             },
@@ -299,38 +370,90 @@ export class DashboardService {
 
     for (const objective of objectives) {
       let weightedSum = 0;
+      let weightedSumPrevious = 0;
       let totalWeight = 0;
+
+      let okCount = 0;
+      let warningCount = 0;
+      let criticalCount = 0;
 
       for (const link of objective.indicators) {
         const indicator = link.indicator;
         const latest = indicator.values[0];
-        if (!latest || !latest.target) continue;
+        const previous = indicator.values[1];
 
-        const value = Number(latest.value);
-        const target = Number(latest.target);
+        if (!latest) continue;
+
+        const value = latest.value ? Number(latest.value) : null;
+        const target = latest.target ? Number(latest.target) : null;
+
+        if (value == null || target == null || target === 0) continue;
 
         let compliance =
           indicator.evaluationDirection === 'LOWER_IS_BETTER'
             ? (target / value) * 100
             : (value / target) * 100;
 
-        compliance = Math.max(0, Math.min(100, compliance));
-
         const weight = indicator.weight ?? 1;
+
         weightedSum += compliance * weight;
         totalWeight += weight;
+
+        if (compliance >= 80) okCount++;
+        else if (compliance >= 60) warningCount++;
+        else criticalCount++;
+
+        // 👇 cálculo período anterior
+        if (previous && previous.target) {
+          const prevValue = Number(previous.value);
+          const prevTarget = Number(previous.target);
+
+          if (prevTarget !== 0) {
+            const prevCompliance =
+              indicator.evaluationDirection === 'LOWER_IS_BETTER'
+                ? (prevTarget / prevValue) * 100
+                : (prevValue / prevTarget) * 100;
+
+            weightedSumPrevious += prevCompliance * weight;
+          }
+        }
       }
 
-      const score =
-        totalWeight > 0
-          ? Math.round(weightedSum / totalWeight)
-          : null;
+      const weightedScore =
+        totalWeight > 0 ? weightedSum / totalWeight : null;
+
+      const previousScore =
+        totalWeight > 0 ? weightedSumPrevious / totalWeight : null;
+
+      let trend: 'UP' | 'DOWN' | 'STABLE' = 'STABLE';
+
+      if (weightedScore != null && previousScore != null) {
+        if (weightedScore > previousScore + 1) trend = 'UP';
+        else if (weightedScore < previousScore - 1) trend = 'DOWN';
+      }
 
       result.push({
         objectiveId: objective.id,
         objectiveCode: objective.code,
         objectiveName: objective.name,
-        score,
+        weightedScore,
+        executiveHealthPercent: weightedScore
+          ? Math.round(weightedScore)
+          : 0,
+        worstStatus:
+          criticalCount > 0
+            ? 'CRITICAL'
+            : warningCount > 0
+              ? 'WARNING'
+              : okCount > 0
+                ? 'OK'
+                : 'NO_DATA',
+        indicatorCount: objective.indicators.length,
+        okCount,
+        warningCount,
+        criticalCount,
+        trend,
+        series: [], // luego mejoramos histórico real
       });
     }
 

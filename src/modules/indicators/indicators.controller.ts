@@ -1,68 +1,73 @@
 import {
   Controller,
-  Post,
   Get,
-  Body,
+  Post,
+  Patch,
+  Delete,
   Param,
+  Body,
   Req,
 } from '@nestjs/common';
-import type { Request } from 'express';
-
 import { IndicatorsService } from './indicators.service';
 import { CreateIndicatorDto } from './dto/create-indicator.dto';
-import { AttachSourceDto } from './dto/attach-source.dto';
-import { CreateIndicatorValueDto } from './dto/create-indicator-value.dto';
+import { UpdateIndicatorDto } from './dto/update-indicator.dto';
+import type { Request } from 'express';
 
-@Controller('indicator-types')
+@Controller('indicators')
 export class IndicatorsController {
   constructor(private readonly indicatorsService: IndicatorsService) {}
 
-  @Post('indicators')
-  createIndicator(@Req() req: Request, @Body() dto: CreateIndicatorDto) {
-    return this.indicatorsService.createIndicator(
-      (req as any).tenantId,
-      dto,
-    );
+  @Post()
+  create(@Req() req: Request, @Body() dto: CreateIndicatorDto) {
+    return this.indicatorsService.createIndicator(req['tenantId'], dto);
   }
 
-  @Get('indicators')
-  findAllIndicators(@Req() req: Request) {
-    return this.indicatorsService.findAllIndicators(
-      (req as any).tenantId,
-    );
+  @Get()
+  findAll(@Req() req: Request) {
+    return this.indicatorsService.findAllIndicators(req['tenantId']);
   }
 
-  @Post('indicators/:id/sources')
-  attachSource(
+  @Get(':id')
+  findOne(@Req() req: Request, @Param('id') id: string) {
+    return this.indicatorsService.findOne(req['tenantId'], id);
+  }
+
+  @Patch(':id')
+  update(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() dto: AttachSourceDto,
+    @Body() dto: UpdateIndicatorDto,
   ) {
-    return this.indicatorsService.attachSource(
-      (req as any).tenantId,
-      id,
-      dto.sourceId,
-      dto.role,
-    );
+    return this.indicatorsService.updateIndicator(req['tenantId'], id, dto);
   }
 
-  @Post('indicators/:id/values')
+  @Patch(':id/toggle')
+  toggle(@Req() req: Request, @Param('id') id: string) {
+    return this.indicatorsService.toggleActive(req['tenantId'], id);
+  }
+
+  @Delete(':id')
+  remove(@Req() req: Request, @Param('id') id: string) {
+    return this.indicatorsService.softDeleteIndicator(req['tenantId'], id);
+  }
+
+  @Post(':id/values')
   createValue(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() dto: CreateIndicatorValueDto,
+    @Body() dto: any,
   ) {
     return this.indicatorsService.createIndicatorValue(
-      (req as any).tenantId,
+      req['tenantId'],
       id,
       dto,
     );
   }
 
-  @Get('indicators/:id/values')
-  getHistory(@Req() req: Request, @Param('id') id: string) {
+  @Get(':id/history')
+  history(@Req() req: Request, @Param('id') id: string) {
     return this.indicatorsService.getIndicatorHistory(
-      (req as any).tenantId,
+      req['tenantId'],
       id,
     );
   }

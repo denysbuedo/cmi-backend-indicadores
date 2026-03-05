@@ -1,33 +1,89 @@
 import {
   Injectable,
-  BadRequestException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SourceRole } from '@prisma/client';
-
 import { CreateIndicatorDto } from './dto/create-indicator.dto';
 import { UpdateIndicatorDto } from './dto/update-indicator.dto';
 
 @Injectable()
 export class IndicatorsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // CREATE
   async createIndicator(tenantId: string, dto: CreateIndicatorDto) {
-    const { objectiveIds, ...indicatorData } = dto;
-
-    return this.prisma.indicator.create({
-      data: {
-        ...indicatorData,
+    const existing = await this.prisma.indicator.findFirst({
+      where: {
         tenantId,
+        code: dto.code,
+      },
+    });
+
+    if (existing) {
+      if (existing.deletedAt) {
+        return this.prisma.indicator.update({
+          where: { id: existing.id },
+          data: {
+            ...dto,
+            active: true,
+            deletedAt: null,
+          },
+        });
+      }
+
+      throw new BadRequestException('Indicator code already exists');
+    }
+
+    // 🔒 VALIDAR PESO TOTAL POR PROCESO
+    const totalWeight = await this.prisma.indicator.aggregate({
+      where: {
+        tenantId,
+        processId: dto.processId,
+        deletedAt: null,
+      },
+      _sum: {
+        weight: true,
+      },
+    });
+
+    const currentWeight = totalWeight._sum.weight ?? 0;
+
+    if (currentWeight + dto.weight > 100) {
+      throw new BadRequestException(
+        `Total weight for this process would exceed 100. Current: ${currentWeight}`
+      );
+    }
+
+    const { objectiveIds, processId, indicatorTypeId, ...rest } = dto;
+
+    const created = await this.prisma.indicator.create({
+      data: {
+        ...rest,
+
+        tenant: {
+          connect: { id: tenantId },
+        },
+
+        process: {
+          connect: { id: processId },
+        },
+
+        indicatorType: {
+          connect: { id: indicatorTypeId },
+        },
+
         objectives: {
           create: objectiveIds.map((objectiveId) => ({
-            objectiveId,
+            objective: {
+              connect: { id: objectiveId },
+            },
           })),
         },
       },
     });
+
+    return created;
   }
 
   // FIND ALL
@@ -38,19 +94,13 @@ export class IndicatorsService {
         deletedAt: null,
       },
       include: {
-        indicatorType: true,
         process: true,
-        objectives: {
-          include: { objective: true },
-        },
-        sources: {
-          include: { source: true },
-        },
+        indicatorType: true,
+        objectives: { include: { objective: true } },
         values: {
           orderBy: { periodStart: 'asc' },
         },
       },
-      orderBy: { name: 'asc' },
     });
   }
 
@@ -61,6 +111,12 @@ export class IndicatorsService {
         id,
         tenantId,
         deletedAt: null,
+      },
+      include: {
+        process: true,
+        indicatorType: true,
+        objectives: { include: { objective: true } },
+        values: true,
       },
     });
 
@@ -77,44 +133,87 @@ export class IndicatorsService {
     id: string,
     dto: UpdateIndicatorDto,
   ) {
-    await this.findOne(tenantId, id);
+    const indicator = await this.findOne(tenantId, id);
 
-    return this.prisma.indicator.update({
-      where: { id },
-      data: dto,
+    const newProcessId = dto.processId ?? indicator.processId;
+    const newWeight = dto.weight ?? indicator.weight;
+
+    // 🔒 VALIDAR PESO TOTAL (excluyendo el propio indicador)
+    const totalWeight = await this.prisma.indicator.aggregate({
+      where: {
+        tenantId,
+        processId: newProcessId,
+        deletedAt: null,
+        NOT: { id: indicator.id },
+      },
+      _sum: {
+        weight: true,
+      },
     });
+
+    const currentWeight = totalWeight._sum.weight ?? 0;
+
+    if (currentWeight + newWeight > 100) {
+      throw new BadRequestException(
+        `Total weight for this process would exceed 100. Current: ${currentWeight}`
+      );
+    }
+
+    const { objectiveIds, processId, indicatorTypeId, ...rest } = dto;
+
+    const updated = await this.prisma.indicator.update({
+      where: { id: indicator.id },
+      data: {
+        ...rest,
+
+        ...(processId && {
+          process: { connect: { id: processId } },
+        }),
+
+        ...(indicatorTypeId && {
+          indicatorType: { connect: { id: indicatorTypeId } },
+        }),
+      },
+    });
+
+    // 🔄 ACTUALIZAR OBJETIVOS si vienen en DTO
+    if (objectiveIds) {
+      await this.prisma.indicatorObjective.deleteMany({
+        where: { indicatorId: indicator.id },
+      });
+
+      await this.prisma.indicatorObjective.createMany({
+        data: objectiveIds.map((objectiveId) => ({
+          indicatorId: indicator.id,
+          objectiveId,
+        })),
+      });
+    }
+
+    return updated;
   }
 
-  // SOFT DELETE
-  async softDeleteIndicator(
-    tenantId: string,
-    id: string,
-  ) {
-    await this.findOne(tenantId, id);
+  // TOGGLE ACTIVE
+  async toggleActive(tenantId: string, id: string) {
+    const indicator = await this.findOne(tenantId, id);
 
     return this.prisma.indicator.update({
-      where: { id },
+      where: { id: indicator.id },
       data: {
-        active: false,
-        deletedAt: new Date(),
+        active: !indicator.active,
       },
     });
   }
 
-  // ATTACH SOURCE
-  async attachSource(
-    tenantId: string,
-    indicatorId: string,
-    sourceId: string,
-    role: SourceRole,
-  ) {
-    await this.findOne(tenantId, indicatorId);
+  // SOFT DELETE
+  async softDeleteIndicator(tenantId: string, id: string) {
+    const indicator = await this.findOne(tenantId, id);
 
-    return this.prisma.indicatorSource.create({
+    return this.prisma.indicator.update({
+      where: { id: indicator.id },
       data: {
-        indicatorId,
-        sourceId,
-        role,
+        active: false,
+        deletedAt: new Date(),
       },
     });
   }
@@ -130,63 +229,23 @@ export class IndicatorsService {
       periodEnd: string;
     },
   ) {
-    const start = new Date(dto.periodStart);
-    const end = new Date(dto.periodEnd);
-
-    if (start > end) {
-      throw new BadRequestException(
-        'periodStart must be before periodEnd',
-      );
-    }
-
-    await this.findOne(tenantId, indicatorId);
-
-    const overlapping = await this.prisma.indicatorValue.findFirst({
-      where: {
-        indicatorId,
-        tenantId,
-        AND: [
-          { periodStart: { lte: end } },
-          { periodEnd: { gte: start } },
-        ],
-      },
-    });
-
-    if (overlapping) {
-      throw new BadRequestException(
-        'Period overlaps with existing record',
-      );
-    }
-
-    let status: 'OK' | 'WARNING' | 'CRITICAL' = 'OK';
-    const value = Number(dto.value);
-
-    if (dto.target !== undefined && dto.target !== null) {
-      const target = Number(dto.target);
-
-      if (value >= target) status = 'OK';
-      else if (value >= target * 0.9) status = 'WARNING';
-      else status = 'CRITICAL';
-    }
+    const indicator = await this.findOne(tenantId, indicatorId);
 
     return this.prisma.indicatorValue.create({
       data: {
-        indicatorId,
+        indicatorId: indicator.id,
         tenantId,
-        value,
+        value: dto.value,
         target: dto.target ?? null,
-        periodStart: start,
-        periodEnd: end,
-        status,
+        periodStart: new Date(dto.periodStart + "T00:00:00.000Z"),
+        periodEnd: new Date(dto.periodEnd + "T23:59:59.999Z"),
+        status: 'OK',
       },
     });
   }
 
   // HISTORY
-  async getIndicatorHistory(
-    tenantId: string,
-    indicatorId: string,
-  ) {
+  async getIndicatorHistory(tenantId: string, indicatorId: string) {
     return this.prisma.indicatorValue.findMany({
       where: {
         indicatorId,

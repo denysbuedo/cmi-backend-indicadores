@@ -33,11 +33,22 @@ export class ProcessController {
     @Param('id') id: string,
     @Body() dto: UpdateProcessDto,
   ) {
-    return this.processService.update(id, req['tenantId'], dto);
+    return this.processService.update(req['tenantId'], id, dto);
+  }
+
+  @Patch(':id/toggle')
+  toggle(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ) {
+    return this.processService.toggleActive(req['tenantId'], id);
   }
 
   @Delete(':id')
-  remove(@Req() req: Request, @Param('id') id: string) {
-    return this.processService.remove(id, req['tenantId']);
+  remove(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ) {
+    return this.processService.remove(req['tenantId'], id);
   }
 }

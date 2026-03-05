@@ -1,236 +1,351 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 📊 CMI Backend - Executive KPI Engine
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> **Backend profesional para gestión de indicadores estratégicos (CMI / KPI) con arquitectura multi-tenant y dashboard ejecutivo**
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🚀 Descripción
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Sistema backend construido con **NestJS 11** y **Prisma ORM** para la gestión de indicadores de gestión (KPIs) orientados a cuadros de mando integrales (CMI). Proporciona una arquitectura escalable, multi-tenant, con motor de ejecución automatizada y dashboard ejecutivo listo para consumo por frontend.
 
-## Project setup
+---
 
-```bash
-$ npm install
+## 🏗 Arquitectura Tecnológica
+
+| Capa | Tecnología |
+|------|------------|
+| **Framework** | NestJS 11 |
+| **Lenguaje** | TypeScript 5.7 |
+| **ORM** | Prisma 6.19 |
+| **Base de Datos** | PostgreSQL |
+| **Validación** | class-validator, class-transformer |
+| **Testing** | Jest, Supertest |
+| **Linting** | ESLint 9, Prettier |
+| **Scheduler** | @nestjs/schedule |
+
+---
+
+## 📦 Características Principales
+
+### ✅ Multi-Tenant
+- Aislamiento de datos por tenant mediante header `x-tenant-id`
+- Middleware global para validación de tenant
+- Arquitectura lista para SaaS
+
+### ✅ Modelo de Datos Profesional
+- **Tenant**: Organización/cliente
+- **IndicatorType**: Clasificación de indicadores (Esencial, Estratégico)
+- **Process**: Procesos de negocio (QA, DEV, OPS)
+- **Objective**: Objetivos estratégicos
+- **Indicator**: Indicadores con configuración flexible
+- **IndicatorValue**: Valores históricos con target
+- **Source**: Fuentes de datos externas (APIs)
+- **ExecutionLog**: Auditoría completa de ejecuciones
+
+### ✅ Dashboard Ejecutivo
+- **Executive Score**: Puntuación global 0-100
+- **Summary**: Resumen de estado
+- **Heatmap**: Por proceso
+- **Objective Scores**: Por objetivo estratégico
+- **Indicators Vencidos**: Alertas de indicadores pendientes
+- **Execution Stats**: Estadísticas de ejecución
+
+### ✅ Evaluación Automática
+- **Tendencia**: UP / DOWN / STABLE
+- **Estado**: OK / WARNING / CRITICAL
+- **Dirección**: HIGHER_IS_BETTER / LOWER_IS_BETTER
+- **Cumplimiento**: % vs Target
+- **Variación**: vs periodo anterior
+
+### ✅ Automatización
+- Scheduler diario (2 AM)
+- Ejecución bajo demanda
+- Detección automática de indicadores vencidos
+- Historial de ejecuciones
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+cmi-backend-inddame icadores/
+├── prisma/
+│   ├── schema.prisma          # Modelo de datos
+│   ├── seed.ts                # Seed idempotente profesional
+│   └── migrations/            # Migraciones de BD
+├── src/
+│   ├── modules/
+│   │   ├── common/            # Middleware, utilidades
+│   │   ├── dashboard/         # Dashboard ejecutivo
+│   │   ├── indicators/        # CRUD indicadores
+│   │   ├── indicator-value/   # Gestión de valores
+│   │   ├── indicator-type/    # Tipos de indicadores
+│   │   ├── process/           # Procesos
+│   │   ├── objective/         # Objetivos
+│   │   ├── sources/           # Fuentes de datos
+│   │   ├── execution/         # Motor de ejecución
+│   │   └── automation/        # Scheduler
+│   ├── prisma/                # Módulo Prisma
+│   ├── app.module.ts
+│   └── main.ts
+├── test/                      # Tests E2E
+└── dist/                      # Build compilado
 ```
 
-## Compile and run the project
+---
+
+## 🔧 Instalación
+
+### Prerrequisitos
+- Node.js 20+
+- PostgreSQL 14+
+- npm o pnpm
+
+### Pasos
 
 ```bash
-# development
-$ npm run start
+# 1. Clonar repositorio
+git clone <repo-url>
+cd cmi-backend-indicadores
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-
-# 📊 CMI Backend Indicadores
-
-## 🚀 Executive KPI Engine --- Multi-Tenant
-
-Backend profesional para gestión de indicadores estratégicos (CMI / KPI
-Engine) con arquitectura moderna y lista para frontend con gráficos
-ejecutivos.
-
-------------------------------------------------------------------------
-
-## 🏗 Arquitectura
-
--   **NestJS 11**
--   **Prisma ORM**
--   **PostgreSQL**
--   Arquitectura **Multi-Tenant**
--   Motor de ejecución desacoplado
--   Auditoría de ejecuciones
--   Dashboard ejecutivo avanzado
--   Seed profesional idempotente
-
-------------------------------------------------------------------------
-
-## 🧠 Características Clave
-
-✔ Multi-tenant por header `x-tenant-id`\
-✔ Historial de indicadores (últimos 6 periodos)\
-✔ Tendencia automática (UP / DOWN / STABLE)\
-✔ % Cumplimiento vs Target\
-✔ Variación vs periodo anterior\
-✔ Orden automático por criticidad\
-✔ Executive Score global (0--100)\
-✔ Auditoría completa de ejecuciones\
-✔ Arquitectura lista para SaaS
-
-------------------------------------------------------------------------
-
-## 📦 Modelos Principales
-
--   Tenant
--   IndicatorType
--   Process
--   Objective
--   Indicator
--   IndicatorValue
--   IndicatorSource
--   ExecutionLog
-
-------------------------------------------------------------------------
-
-## 📊 Dashboard Ejecutivo
-
-Endpoint principal:
-
-    GET /dashboard/executive
-
-Retorna:
-
--   Summary global
--   Executive Score
--   Lista ordenada por criticidad
--   Tendencia
--   Cumplimiento %
--   Variación %
--   Historial últimos 6 periodos
-
-------------------------------------------------------------------------
-
-## 🔐 Multi-Tenant
-
-Todas las peticiones requieren:
-
-    x-tenant-id: <UUID_DEL_TENANT>
-
-------------------------------------------------------------------------
-
-## 🌱 Seed de Base de Datos
-
-Ejecutar:
-
-    npx prisma db seed
-
-Crea automáticamente:
-
--   Tenant (MES)
--   IndicatorType (ES)
--   Process (QA_SUPPORT)
--   Objective (REDUCE_SUPPORT_ERRORS)
--   Indicator (QA_SUPPORT_COMMITS)
--   Valor inicial de ejemplo
-
-------------------------------------------------------------------------
-
-## 🛠 Instalación
-
-``` bash
+# 2. Instalar dependencias
 npm install
+
+# 3. Configurar variables de entorno
+cp .env.example .env
+# Editar .env con DATABASE_URL
+
+# 4. Ejecutar migraciones
 npx prisma migrate dev
+
+# 5. Seed de datos iniciales
 npx prisma db seed
+
+# 6. Iniciar servidor desarrollo
 npm run start:dev
 ```
 
-------------------------------------------------------------------------
+El servidor correrá en `http://localhost:3000`
 
-## 📈 Executive Score
+---
+
+## 📡 API Endpoints
+
+### Dashboard Ejecutivo
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/dashboard/executive` | Dashboard ejecutivo completo |
+| `GET` | `/dashboard/summary` | Resumen global |
+| `GET` | `/dashboard/overdue` | Indicadores vencidos |
+| `GET` | `/dashboard/execution-stats` | Estadísticas de ejecución |
+| `GET` | `/dashboard/process-heatmap` | Heatmap por proceso |
+| `GET` | `/dashboard/objective-scores` | Puntuación por objetivo |
+
+### Indicadores
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/indicators` | Crear indicador |
+| `GET` | `/indicators` | Listar todos |
+| `GET` | `/indicators/:id` | Obtener uno |
+| `GET` | `/indicators/:id/history` | Historial |
+| `PATCH` | `/indicators/:id` | Actualizar |
+| `PATCH` | `/indicators/:id/toggle` | Activar/desactivar |
+| `DELETE` | `/indicators/:id` | Eliminar (soft) |
+| `POST` | `/indicators/:id/values` | Crear valor |
+
+### Ejecución
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/execution/indicator/:id/run` | Ejecutar indicador |
+
+### Procesos, Objetivos, Tipos
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/processes` | Listar procesos |
+| `GET` | `/objectives` | Listar objetivos |
+| `GET` | `/indicator-types` | Listar tipos |
+
+---
+
+## 🔐 Multi-Tenant
+
+Todas las peticiones requieren el header:
+
+```
+x-tenant-id: <UUID_DEL_TENANT>
+```
+
+El middleware valida automáticamente la existencia del tenant y lo inyecta en cada request.
+
+---
+
+## 🌱 Seed de Datos
+
+El seed crea automáticamente:
+
+- **Tenant**: MES
+- **Tipos**: Esencial (ESS), Estratégico (STR)
+- **Procesos**: QA, DEV, OPS
+- **Objetivos**: Reducir defectos, Mejorar productividad, Aumentar estabilidad
+- **12 Indicadores** con histórico 2021-2026:
+  - BUG_RATE, TEST_COVERAGE, DEFECT_DENSITY, ESCAPED_DEFECTS
+  - COMMITS, LEAD_TIME, DEPLOY_FREQ, CODE_REVIEW_TIME
+  - INCIDENTS, MTTR, AVAILABILITY, ERROR_RATE
+
+---
+
+## 📊 Executive Score
 
 Se calcula como:
 
-> Promedio de cumplimiento (%) de todos los indicadores con target.
+```
+Executive Score = Promedio(cumplimiento %) de indicadores con target
+```
 
-Máximo 100.
+- Máximo: **100**
+- Mínimo: **0**
+- Solo incluye indicadores con `target` definido
 
-------------------------------------------------------------------------
+---
 
-## 🧭 Flujo Git Recomendado
+## 🧪 Testing
 
--   `main` → Rama estable (producción)
--   `dev` → Desarrollo activo
--   PR obligatorio de `dev` → `main`
+```bash
+# Tests unitarios
+npm run test
 
-------------------------------------------------------------------------
+# Tests unitarios (watch mode)
+npm run test:watch
 
-## 🧩 Próximos Pasos
+# Tests con cobertura
+npm run test:cov
 
--   JWT multi-tenant authentication
--   Alertas automáticas
--   Scheduler dinámico
--   Frontend React con gráficos ejecutivos
--   Despliegue SaaS-ready
+# Tests E2E
+npm run test:e2e
+```
 
-------------------------------------------------------------------------
+---
+
+## 🛠 Comandos Disponibles
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run build` | Compilar para producción |
+| `npm run start` | Iniciar en modo normal |
+| `npm run start:dev` | Desarrollo con watch |
+| `npm run start:debug` | Debug con watch |
+| `npm run start:prod` | Producción |
+| `npm run lint` | Linting con auto-fix |
+| `npm run format` | Formatear código |
+| `npm run test` | Ejecutar tests |
+| `npm run seed` | Ejecutar seed |
+
+---
+
+## 📈 Modelos de Datos
+
+### Enums Principales
+
+```typescript
+enum HttpMethod { GET, POST, PUT, DELETE }
+enum IndicatorUnit { NUMBER, PERCENT }
+enum SourceRole { DATA, NUMERATOR, DENOMINATOR }
+enum IndicatorStatus { OK, WARNING, CRITICAL }
+enum EvaluationDirection { HIGHER_IS_BETTER, LOWER_IS_BETTER }
+```
+
+### Relaciones Clave
+
+- **Tenant** → 1:N → Indicator, Process, Objective, IndicatorType, Source, IndicatorValue, ExecutionLog
+- **Indicator** → N:M → Objective (vía IndicatorObjective)
+- **Indicator** → N:M → Source (vía IndicatorSource, con rol)
+- **Indicator** → 1:N → IndicatorValue (histórico)
+
+---
+
+## 🔒 CORS Configurado
+
+```typescript
+origins: [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173"
+]
+```
+
+Permite conexión desde frontend React/Vite en puerto 5173.
+
+---
+
+## 📦 Dependencias Principales
+
+```json
+{
+  "@nestjs/common": "^11.0.1",
+  "@nestjs/core": "^11.0.1",
+  "@nestjs/schedule": "^6.1.1",
+  "@nestjs/axios": "^4.0.1",
+  "@prisma/client": "^6.19.2",
+  "class-validator": "^0.14.3",
+  "class-transformer": "^0.5.1",
+  "reflect-metadata": "^0.2.2"
+}
+```
+
+---
+
+## 🚀 Próximos Pasos (Roadmap)
+
+- [ ] JWT multi-tenant authentication
+- [ ] Alertas automáticas por email/webhook
+- [ ] Scheduler dinámico (configurable por UI)
+- [ ] Frontend React con gráficos ejecutivos
+- [ ] Despliegue SaaS-ready (Docker + Kubernetes)
+- [ ] Export a Excel/PDF
+- [ ] Dashboard comparativo entre tenants
+
+---
+
+## 📚 Git Workflow
+
+Ver [`GIT_WORKFLOW_CMI.md`](./GIT_WORKFLOW_CMI.md) para el flujo de trabajo con Git.
+
+**Resumen:**
+- `main` → Rama estable (producción)
+- `dev` → Desarrollo activo
+- PR obligatorio de `dev` → `main`
+
+---
 
 ## 👨‍💻 Autor
 
-Denys Buedo Hidalgo\
+**Denys Buedo Hidalgo**  
 Executive KPI Engine
 
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+## 📄 Licencia
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Proyecto privado - Todos los derechos reservados.
+
+NestJS es [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+---
+
+## 🆘 Soporte
+
+- **Documentación NestJS**: https://docs.nestjs.com
+- **Discord NestJS**: https://discord.gg/G7Qnnhy
+- **Prisma Docs**: https://www.prisma.io/docs
+
+---
+
+<div align="center">
+
+**CMI Backend - Executive KPI Engine**  
+*Arquitectura limpia. Escalable. Profesional.*
+
+</div>
