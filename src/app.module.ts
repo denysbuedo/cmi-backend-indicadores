@@ -1,4 +1,5 @@
 import { Module, MiddlewareConsumer } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 
 import { IndicatorsModule } from './modules/indicators/indicators.module';
@@ -15,6 +16,10 @@ import { TenantMiddleware } from './modules/common/middleware/tenant.middleware'
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
     PrismaModule,
     IndicatorsModule,
     ProcessModule,

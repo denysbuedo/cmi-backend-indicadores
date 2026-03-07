@@ -1,14 +1,20 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const configService = app.get(ConfigService);
+  const corsOrigins = configService.get<string>('CORS_ORIGINS')?.split(',') || [];
+  const port = configService.get<number>('PORT', 3000);
+
   app.enableCors({
     origin: [
       "http://localhost:5173",
       "http://127.0.0.1:5173",
+      ...corsOrigins,
     ],
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     allowedHeaders: [
@@ -19,6 +25,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  await app.listen(3000);
+  await app.listen(port);
+  console.log(`Backend running on port ${port}`);
 }
 bootstrap();
