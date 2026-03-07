@@ -70,7 +70,7 @@ GET /dashboard/executive
 ```
 
 **Descripción:**  
-Retorna el dashboard completo con Executive Score, lista de indicadores ordenados por criticidad, tendencia, cumplimiento y variación. Incluye información detallada de cada indicador con su histórico.
+Retorna el dashboard completo con Executive Score, lista de indicadores ordenados por criticidad, tendencia, cumplimiento y variación. Incluye información detallada de cada indicador con su histórico **y el estado de los procesos** con scores ponderados y tendencias.
 
 **Respuesta:**
 ```json
@@ -109,7 +109,43 @@ Retorna el dashboard completo con Executive Score, lista de indicadores ordenado
         }
       ]
     }
-  ]
+  ],
+  "processes": {
+    "total": 3,
+    "ok": 2,
+    "warning": 1,
+    "critical": 0,
+    "avgScore": 84.5,
+    "list": [
+      {
+        "id": "uuid-proceso",
+        "code": "QA",
+        "name": "Quality Assurance",
+        "score": 85.2,
+        "status": "OK",
+        "indicatorCount": 4,
+        "trend": "UP"
+      },
+      {
+        "id": "uuid-proceso",
+        "code": "DEV",
+        "name": "Desarrollo",
+        "score": 62.5,
+        "status": "WARNING",
+        "indicatorCount": 4,
+        "trend": "DOWN"
+      },
+      {
+        "id": "uuid-proceso",
+        "code": "OPS",
+        "name": "Operaciones",
+        "score": 88.1,
+        "status": "OK",
+        "indicatorCount": 4,
+        "trend": "STABLE"
+      }
+    ]
+  }
 }
 ```
 

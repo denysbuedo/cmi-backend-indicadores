@@ -114,7 +114,7 @@ export class DashboardService {
   }
 
   // =====================================================
-  // EXECUTIVE DASHBOARD (UPDATED WITH OBJECTIVES)
+  // EXECUTIVE DASHBOARD (UPDATED WITH PROCESSES)
   // =====================================================
   async getExecutiveDashboard(tenantId: string) {
     const indicators = await this.prisma.indicator.findMany({
@@ -213,12 +213,135 @@ export class DashboardService {
         ? Number((weightedSum / totalWeight).toFixed(2))
         : null;
 
+    // =====================================================
+    // PROCESSES INFORMATION
+    // =====================================================
+    const processes = await this.prisma.process.findMany({
+      where: { tenantId, deletedAt: null, active: true },
+      include: {
+        indicators: {
+          where: { deletedAt: null, active: true },
+          include: {
+            values: {
+              orderBy: { periodEnd: 'desc' },
+              take: 2,
+            },
+          },
+        },
+      },
+    });
+
+    const processList = processes.map((process) => {
+      const processIndicators = indicators.filter(
+        (i) => i.processId === process.id,
+      );
+
+      let processWeightedSum = 0;
+      let processTotalWeight = 0;
+      let previousWeightedSum = 0;
+      let previousTotalWeight = 0;
+
+      for (const indicator of processIndicators) {
+        const latest = indicator.values[0];
+        const previous = indicator.values[1];
+
+        if (!latest || !latest.target) continue;
+
+        const value = Number(latest.value);
+        const target = Number(latest.target);
+
+        let compliance =
+          indicator.evaluationDirection === 'LOWER_IS_BETTER'
+            ? (target / value) * 100
+            : (value / target) * 100;
+
+        compliance = Math.max(0, compliance);
+
+        const weight = indicator.weight ?? 1;
+        processWeightedSum += compliance * weight;
+        processTotalWeight += weight;
+
+        // Cálculo período anterior para tendencia
+        if (previous && previous.target) {
+          const prevValue = Number(previous.value);
+          const prevTarget = Number(previous.target);
+
+          if (prevTarget !== 0) {
+            const prevCompliance =
+              indicator.evaluationDirection === 'LOWER_IS_BETTER'
+                ? (prevTarget / prevValue) * 100
+                : (prevValue / prevTarget) * 100;
+
+            previousWeightedSum += prevCompliance * weight;
+            previousTotalWeight += weight;
+          }
+        }
+      }
+
+      const score =
+        processTotalWeight > 0
+          ? processWeightedSum / processTotalWeight
+          : 0;
+
+      const previousScore =
+        previousTotalWeight > 0
+          ? previousWeightedSum / previousTotalWeight
+          : null;
+
+      let status: 'OK' | 'WARNING' | 'CRITICAL' | 'NO_DATA' = 'NO_DATA';
+      if (processIndicators.length > 0) {
+        if (score >= 80) status = 'OK';
+        else if (score >= 60) status = 'WARNING';
+        else status = 'CRITICAL';
+      }
+
+      let trend: 'UP' | 'DOWN' | 'STABLE' = 'STABLE';
+      if (score > 0 && previousScore != null) {
+        if (score > previousScore + 5) trend = 'UP';
+        else if (score < previousScore - 5) trend = 'DOWN';
+      }
+
+      return {
+        id: process.id,
+        code: process.code,
+        name: process.name,
+        score: parseFloat(score.toFixed(1)),
+        status,
+        indicatorCount: processIndicators.length,
+        trend,
+      };
+    });
+
+    // Calcular resumen de procesos
+    const totalOk = processList.filter((p) => p.status === 'OK').length;
+    const totalWarning = processList.filter((p) => p.status === 'WARNING').length;
+    const totalCritical = processList.filter((p) => p.status === 'CRITICAL').length;
+
+    const avgScore =
+      processList.length > 0
+        ? parseFloat(
+            (
+              processList.reduce((sum, p) => sum + p.score, 0) / processList.length
+            ).toFixed(1),
+          )
+        : 0;
+
+    const processSummary = {
+      total: processList.length,
+      ok: totalOk,
+      warning: totalWarning,
+      critical: totalCritical,
+      avgScore,
+      list: processList,
+    };
+
     return {
       summary: {
         totalIndicators: detailed.length,
       },
       executiveScore,
       indicators: detailed,
+      processes: processSummary,
     };
   }
   // =====================================================
