@@ -37,6 +37,15 @@ export interface ProcessSummary {
   list: ProcessDashboardItem[];
 }
 
+export interface ObjectiveDashboardItem {
+  objectiveId: string;
+  objectiveCode: string;
+  objectiveName: string;
+  weightedScore: number;
+  worstStatus: 'OK' | 'WARNING' | 'CRITICAL';
+  indicatorCount: number;
+}
+
 export interface ExecutiveDashboardResponse {
   summary: {
     totalIndicators: number;
@@ -44,4 +53,5 @@ export interface ExecutiveDashboardResponse {
   executiveScore: number | null;
   indicators: IndicatorDashboardItem[];
   processes: ProcessSummary;
+  objectives: ObjectiveDashboardItem[];
 }

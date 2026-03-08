@@ -1,8 +1,8 @@
-# 📋 Instrucciones para Backend - Dashboard Ejecutivo con Procesos
+# 📋 Instrucciones para Backend - Dashboard Ejecutivo
 
 ## 🎯 Objetivo
 
-Agregar información de **procesos** al endpoint del Dashboard Ejecutivo para que el frontend pueda mostrar el estado de los procesos junto con los indicadores.
+Agregar información de **procesos** y **objetivos** al endpoint del Dashboard Ejecutivo para que el frontend pueda mostrar una vista completa del estado de la organización.
 
 ---
 
@@ -70,7 +70,33 @@ Agregar información de **procesos** al endpoint del Dashboard Ejecutivo para qu
         "trend": "STABLE"
       }
     ]
-  }
+  },
+  "objectives": [
+    {
+      "objectiveId": "uuid-obj-1",
+      "objectiveCode": "O1",
+      "objectiveName": "Mejorar la calidad del producto",
+      "weightedScore": 82.5,
+      "worstStatus": "OK",
+      "indicatorCount": 5
+    },
+    {
+      "objectiveId": "uuid-obj-2",
+      "objectiveCode": "O2",
+      "objectiveName": "Optimizar tiempos de entrega",
+      "weightedScore": 65.0,
+      "worstStatus": "WARNING",
+      "indicatorCount": 4
+    },
+    {
+      "objectiveId": "uuid-obj-3",
+      "objectiveCode": "O3",
+      "objectiveName": "Incrementar satisfacción del cliente",
+      "weightedScore": 45.0,
+      "worstStatus": "CRITICAL",
+      "indicatorCount": 3
+    }
+  ]
 }
 ```
 
@@ -101,6 +127,17 @@ Agregar información de **procesos** al endpoint del Dashboard Ejecutivo para qu
 | `indicatorCount` | number | Cantidad de indicadores del proceso |
 | `trend` | "UP" \| "DOWN" \| "STABLE" | Tendencia vs período anterior (opcional) |
 
+### `ObjectiveDashboardItem` (cada objetivo en `objectives`)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `objectiveId` | string (UUID) | ID único del objetivo |
+| `objectiveCode` | string | Código del objetivo (ej: "O1", "O2") |
+| `objectiveName` | string | Nombre completo del objetivo |
+| `weightedScore` | number | Score ponderado del objetivo (0-100) |
+| `worstStatus` | "OK" \| "WARNING" \| "CRITICAL" | Peor estado entre sus indicadores |
+| `indicatorCount` | number | Cantidad de indicadores asociados |
+
 ---
 
 ## 🧮 Cálculos Requeridos
@@ -123,7 +160,28 @@ else if (processScore >= 60) status = "WARNING"
 else status = "CRITICAL"
 ```
 
-### 3. **Conteo de Estados**
+### 3. **Score Ponderado por Objetivo**
+
+El score de cada objetivo es el **promedio ponderado** de sus indicadores:
+
+```typescript
+objectiveScore = sum(indicator.compliancePercent * indicator.weight) / sum(indicator.weight)
+```
+
+### 4. **Peor Estado por Objetivo**
+
+El estado del objetivo es el **peor estado** entre todos sus indicadores:
+
+```typescript
+// Si algún indicador está CRITICAL → objetivo CRITICAL
+// Si algún indicador está WARNING (y ninguno CRITICAL) → objetivo WARNING
+// Si todos están OK → objetivo OK
+worstStatus = indicators.some(i => i.status === 'CRITICAL') ? 'CRITICAL'
+  : indicators.some(i => i.status === 'WARNING') ? 'WARNING'
+  : 'OK'
+```
+
+### 5. **Conteo de Estados (Procesos)**
 
 ```typescript
 ok = processes.filter(p => p.status === "OK").length
@@ -131,13 +189,13 @@ warning = processes.filter(p => p.status === "WARNING").length
 critical = processes.filter(p => p.status === "CRITICAL").length
 ```
 
-### 4. **Score Promedio**
+### 6. **Score Promedio (Procesos)**
 
 ```typescript
 avgScore = processes.reduce((sum, p) => sum + p.score, 0) / processes.length
 ```
 
-### 5. **Tendencia (Opcional)**
+### 7. **Tendencia (Opcional)**
 
 Comparar el score actual con el del período anterior:
 
@@ -157,30 +215,36 @@ else trend = "STABLE"
 async getExecutiveDashboard(tenantId: string): Promise<ExecutiveDashboardResponse> {
   // 1. Obtener indicadores (ya existente)
   const indicators = await this.getIndicators(tenantId);
-  
+
   // 2. Obtener procesos con sus indicadores
   const processes = await this.processRepository.find({
     where: { tenantId, active: true },
     relations: ['indicators']
   });
-  
-  // 3. Calcular score por proceso
+
+  // 3. Obtener objetivos con sus indicadores
+  const objectives = await this.objectiveRepository.find({
+    where: { tenantId, active: true },
+    relations: ['indicators']
+  });
+
+  // 4. Calcular score por proceso
   const processList = processes.map(process => {
     const processIndicators = indicators.filter(i => i.processId === process.id);
-    
+
     const totalWeight = processIndicators.reduce((sum, i) => sum + i.weight, 0);
     const weightedScore = processIndicators.reduce(
       (sum, i) => sum + (i.compliancePercent * i.weight),
       0
     );
-    
+
     const score = totalWeight > 0 ? weightedScore / totalWeight : 0;
-    
+
     let status: IndicatorStatus;
     if (score >= 80) status = 'OK';
     else if (score >= 60) status = 'WARNING';
     else status = 'CRITICAL';
-    
+
     return {
       id: process.id,
       code: process.code,
@@ -191,20 +255,50 @@ async getExecutiveDashboard(tenantId: string): Promise<ExecutiveDashboardRespons
       trend: 'STABLE' // Calcular comparando con período anterior
     };
   });
-  
-  // 4. Calcular resumen de procesos
+
+  // 5. Calcular score y estado por objetivo
+  const objectiveList = objectives.map(objective => {
+    const objectiveIndicators = indicators.filter(i => i.objectiveId === objective.id);
+
+    const totalWeight = objectiveIndicators.reduce((sum, i) => sum + i.weight, 0);
+    const weightedScore = objectiveIndicators.reduce(
+      (sum, i) => sum + (i.compliancePercent * i.weight),
+      0
+    );
+
+    const score = totalWeight > 0 ? weightedScore / totalWeight : 0;
+
+    // Determinar el peor estado
+    let worstStatus: IndicatorStatus = 'OK';
+    if (objectiveIndicators.some(i => i.status === 'CRITICAL')) {
+      worstStatus = 'CRITICAL';
+    } else if (objectiveIndicators.some(i => i.status === 'WARNING')) {
+      worstStatus = 'WARNING';
+    }
+
+    return {
+      objectiveId: objective.id,
+      objectiveCode: objective.code,
+      objectiveName: objective.name,
+      weightedScore: parseFloat(score.toFixed(1)),
+      worstStatus,
+      indicatorCount: objectiveIndicators.length
+    };
+  });
+
+  // 6. Calcular resumen de procesos
   const processSummary: ProcessSummary = {
     total: processList.length,
     ok: processList.filter(p => p.status === 'OK').length,
     warning: processList.filter(p => p.status === 'WARNING').length,
     critical: processList.filter(p => p.status === 'CRITICAL').length,
     avgScore: parseFloat(
-      (processList.reduce((sum, p) => sum + p.score, 0) / processList.length).toFixed(1)
+      (processList.reduce((sum, p) => sum + p.score, 0) / processList.length || 0).toFixed(1)
     ),
     list: processList
   };
-  
-  // 5. Retornar respuesta completa
+
+  // 7. Retornar respuesta completa
   return {
     summary: {
       totalIndicators: indicators.length,
@@ -214,7 +308,8 @@ async getExecutiveDashboard(tenantId: string): Promise<ExecutiveDashboardRespons
     },
     executiveScore: this.calculateExecutiveScore(indicators),
     indicators: this.mapIndicators(indicators),
-    processes: processSummary
+    processes: processSummary,
+    objectives: objectiveList
   };
 }
 ```
@@ -227,6 +322,7 @@ async getExecutiveDashboard(tenantId: string): Promise<ExecutiveDashboardRespons
 
 Verificar que la respuesta incluya:
 
+#### Procesos:
 - [ ] `processes` existe
 - [ ] `processes.total` es número
 - [ ] `processes.ok + processes.warning + processes.critical === processes.total`
@@ -234,23 +330,37 @@ Verificar que la respuesta incluya:
 - [ ] `processes.list` es array
 - [ ] Cada item en `list` tiene: id, code, name, score, status, indicatorCount
 
+#### Objetivos:
+- [ ] `objectives` existe (puede ser array vacío)
+- [ ] `objectives` es un array
+- [ ] Cada item tiene: objectiveId, objectiveCode, objectiveName, weightedScore, worstStatus, indicatorCount
+
 ### Edge Cases
 
 - [ ] Si no hay procesos → `processes.list = []`, `total = 0`, `avgScore = 0`
+- [ ] Si no hay objetivos → `objectives = []`
 - [ ] Si un proceso no tiene indicadores → `score = 0`, `status = "CRITICAL"`
+- [ ] Si un objetivo no tiene indicadores → `score = 0`, `worstStatus = "OK"`
 - [ ] Si todos los procesos están OK → `ok = total`, `warning = 0`, `critical = 0`
 
 ---
 
 ## 📝 Notas Importantes
 
-1. **Campo opcional**: El frontend está diseñado para trabajar incluso si `processes` no existe en la respuesta (usa valores por defecto).
+1. **Campos opcionales**: El frontend está diseñado para trabajar incluso si `processes` o `objectives` no existen en la respuesta.
 
-2. **Performance**: Si hay muchos procesos, considerar paginar o limitar la lista a los primeros 10-20 procesos.
+2. **Performance**: 
+   - Para procesos: el frontend muestra todos con scroll (max-h-64)
+   - Para objetivos: el frontend muestra todos sin límite
+   - Considerar índices en las tablas para filtrar por `tenantId`
 
 3. **Cache**: Este endpoint puede ser cacheado por 5-10 minutos ya que no requiere datos en tiempo real.
 
 4. **Tenant**: Asegurarse de filtrar todos los datos por `tenantId`.
+
+5. **Prioridad de implementación**:
+   - ✅ **Procesos**: Ya implementado (según conversación previa)
+   - ⚠️ **Objetivos**: Pendiente de implementar
 
 ---
 
@@ -258,7 +368,7 @@ Verificar que la respuesta incluya:
 
 1. Actualizar la versión del backend
 2. Avisar al equipo de frontend
-3. El frontend automáticamente mostrará los datos de procesos
+3. El frontend automáticamente mostrará los datos
 
 ---
 

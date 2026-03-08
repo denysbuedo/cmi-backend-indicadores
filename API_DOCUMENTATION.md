@@ -70,7 +70,7 @@ GET /dashboard/executive
 ```
 
 **Descripción:**  
-Retorna el dashboard completo con Executive Score, lista de indicadores ordenados por criticidad, tendencia, cumplimiento y variación. Incluye información detallada de cada indicador con su histórico **y el estado de los procesos** con scores ponderados y tendencias.
+Retorna el dashboard completo con Executive Score, lista de indicadores ordenados por criticidad, tendencia, cumplimiento y variación. Incluye información detallada de cada indicador con su histórico.
 
 **Respuesta:**
 ```json
@@ -145,7 +145,33 @@ Retorna el dashboard completo con Executive Score, lista de indicadores ordenado
         "trend": "STABLE"
       }
     ]
-  }
+  },
+  "objectives": [
+    {
+      "objectiveId": "uuid-obj-1",
+      "objectiveCode": "REDUCE_DEFECTS",
+      "objectiveName": "Reducir defectos",
+      "weightedScore": 82.5,
+      "worstStatus": "OK",
+      "indicatorCount": 3
+    },
+    {
+      "objectiveId": "uuid-obj-2",
+      "objectiveCode": "IMPROVE_PRODUCTIVITY",
+      "objectiveName": "Mejorar productividad",
+      "weightedScore": 65.0,
+      "worstStatus": "WARNING",
+      "indicatorCount": 4
+    },
+    {
+      "objectiveId": "uuid-obj-3",
+      "objectiveCode": "INCREASE_STABILITY",
+      "objectiveName": "Aumentar estabilidad",
+      "weightedScore": 45.0,
+      "worstStatus": "CRITICAL",
+      "indicatorCount": 5
+    }
+  ]
 }
 ```
 

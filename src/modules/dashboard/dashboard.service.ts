@@ -335,6 +335,83 @@ export class DashboardService {
       list: processList,
     };
 
+    // =====================================================
+    // OBJECTIVES INFORMATION
+    // =====================================================
+    const objectives = await this.prisma.objective.findMany({
+      where: { tenantId, deletedAt: null, active: true },
+      include: {
+        indicators: {
+          include: {
+            indicator: true,
+          },
+        },
+      },
+    });
+
+    const objectiveList = objectives.map((objective) => {
+      const objectiveIndicators = objective.indicators.map(
+        (link) => link.indicator,
+      );
+
+      // Filtrar indicadores con datos de cumplimiento
+      const indicatorsWithCompliance = indicators.filter((i) =>
+        objective.indicators.some((link) => link.indicatorId === i.id),
+      );
+
+      let totalWeight = 0;
+      let weightedScore = 0;
+
+      let okCount = 0;
+      let warningCount = 0;
+      let criticalCount = 0;
+
+      for (const indicator of indicatorsWithCompliance) {
+        const latest = indicator.values[0];
+
+        if (!latest || !latest.target) continue;
+
+        const value = Number(latest.value);
+        const target = Number(latest.target);
+
+        let compliance =
+          indicator.evaluationDirection === 'LOWER_IS_BETTER'
+            ? (target / value) * 100
+            : (value / target) * 100;
+
+        compliance = Math.max(0, compliance);
+
+        const weight = indicator.weight ?? 1;
+        weightedScore += compliance * weight;
+        totalWeight += weight;
+
+        // Contar estados para worstStatus
+        if (latest.status === 'OK') okCount++;
+        else if (latest.status === 'WARNING') warningCount++;
+        else if (latest.status === 'CRITICAL') criticalCount++;
+      }
+
+      const score =
+        totalWeight > 0 ? weightedScore / totalWeight : 0;
+
+      // Determinar el peor estado
+      let worstStatus: 'OK' | 'WARNING' | 'CRITICAL' = 'OK';
+      if (criticalCount > 0) {
+        worstStatus = 'CRITICAL';
+      } else if (warningCount > 0) {
+        worstStatus = 'WARNING';
+      }
+
+      return {
+        objectiveId: objective.id,
+        objectiveCode: objective.code,
+        objectiveName: objective.name,
+        weightedScore: parseFloat(score.toFixed(1)),
+        worstStatus,
+        indicatorCount: indicatorsWithCompliance.length,
+      };
+    });
+
     return {
       summary: {
         totalIndicators: detailed.length,
@@ -342,6 +419,7 @@ export class DashboardService {
       executiveScore,
       indicators: detailed,
       processes: processSummary,
+      objectives: objectiveList,
     };
   }
   // =====================================================
