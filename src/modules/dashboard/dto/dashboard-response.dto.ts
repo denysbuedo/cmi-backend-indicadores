@@ -44,6 +44,7 @@ export interface ObjectiveDashboardItem {
   weightedScore: number;
   worstStatus: 'OK' | 'WARNING' | 'CRITICAL';
   indicatorCount: number;
+  trend: 'UP' | 'DOWN' | 'STABLE';
 }
 
 export interface ExecutiveDashboardResponse {

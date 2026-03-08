@@ -153,7 +153,8 @@ Retorna el dashboard completo con Executive Score, lista de indicadores ordenado
       "objectiveName": "Reducir defectos",
       "weightedScore": 82.5,
       "worstStatus": "OK",
-      "indicatorCount": 3
+      "indicatorCount": 3,
+      "trend": "UP"
     },
     {
       "objectiveId": "uuid-obj-2",
@@ -161,7 +162,8 @@ Retorna el dashboard completo con Executive Score, lista de indicadores ordenado
       "objectiveName": "Mejorar productividad",
       "weightedScore": 65.0,
       "worstStatus": "WARNING",
-      "indicatorCount": 4
+      "indicatorCount": 4,
+      "trend": "DOWN"
     },
     {
       "objectiveId": "uuid-obj-3",
@@ -169,7 +171,8 @@ Retorna el dashboard completo con Executive Score, lista de indicadores ordenado
       "objectiveName": "Aumentar estabilidad",
       "weightedScore": 45.0,
       "worstStatus": "CRITICAL",
-      "indicatorCount": 5
+      "indicatorCount": 5,
+      "trend": "STABLE"
     }
   ]
 }

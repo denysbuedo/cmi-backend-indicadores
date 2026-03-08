@@ -361,6 +361,8 @@ export class DashboardService {
 
       let totalWeight = 0;
       let weightedScore = 0;
+      let previousWeightedScore = 0;
+      let previousTotalWeight = 0;
 
       let okCount = 0;
       let warningCount = 0;
@@ -368,6 +370,7 @@ export class DashboardService {
 
       for (const indicator of indicatorsWithCompliance) {
         const latest = indicator.values[0];
+        const previous = indicator.values[1];
 
         if (!latest || !latest.target) continue;
 
@@ -385,6 +388,22 @@ export class DashboardService {
         weightedScore += compliance * weight;
         totalWeight += weight;
 
+        // Cálculo período anterior para tendencia
+        if (previous && previous.target) {
+          const prevValue = Number(previous.value);
+          const prevTarget = Number(previous.target);
+
+          if (prevTarget !== 0) {
+            const prevCompliance =
+              indicator.evaluationDirection === 'LOWER_IS_BETTER'
+                ? (prevTarget / prevValue) * 100
+                : (prevValue / prevTarget) * 100;
+
+            previousWeightedScore += prevCompliance * weight;
+            previousTotalWeight += weight;
+          }
+        }
+
         // Contar estados para worstStatus
         if (latest.status === 'OK') okCount++;
         else if (latest.status === 'WARNING') warningCount++;
@@ -394,12 +413,25 @@ export class DashboardService {
       const score =
         totalWeight > 0 ? weightedScore / totalWeight : 0;
 
+      const previousScore =
+        previousTotalWeight > 0
+          ? previousWeightedScore / previousTotalWeight
+          : null;
+
       // Determinar el peor estado
       let worstStatus: 'OK' | 'WARNING' | 'CRITICAL' = 'OK';
       if (criticalCount > 0) {
         worstStatus = 'CRITICAL';
       } else if (warningCount > 0) {
         worstStatus = 'WARNING';
+      }
+
+      // Calcular tendencia
+      let trend: 'UP' | 'DOWN' | 'STABLE' = 'STABLE';
+      if (score > 0 && previousScore != null) {
+        const scoreDiff = score - previousScore;
+        if (scoreDiff > 5) trend = 'UP';
+        else if (scoreDiff < -5) trend = 'DOWN';
       }
 
       return {
@@ -409,6 +441,7 @@ export class DashboardService {
         weightedScore: parseFloat(score.toFixed(1)),
         worstStatus,
         indicatorCount: indicatorsWithCompliance.length,
+        trend,
       };
     });
 
