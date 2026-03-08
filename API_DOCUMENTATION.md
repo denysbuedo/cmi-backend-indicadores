@@ -109,6 +109,71 @@ Retorna el dashboard completo con Executive Score, lista de indicadores ordenado
         }
       ]
     }
+  ],
+  "processes": {
+    "total": 3,
+    "ok": 2,
+    "warning": 1,
+    "critical": 0,
+    "avgScore": 84.5,
+    "list": [
+      {
+        "id": "uuid-proceso",
+        "code": "QA",
+        "name": "Quality Assurance",
+        "score": 85.2,
+        "status": "OK",
+        "indicatorCount": 4,
+        "trend": "UP"
+      },
+      {
+        "id": "uuid-proceso",
+        "code": "DEV",
+        "name": "Desarrollo",
+        "score": 62.5,
+        "status": "WARNING",
+        "indicatorCount": 4,
+        "trend": "DOWN"
+      },
+      {
+        "id": "uuid-proceso",
+        "code": "OPS",
+        "name": "Operaciones",
+        "score": 88.1,
+        "status": "OK",
+        "indicatorCount": 4,
+        "trend": "STABLE"
+      }
+    ]
+  },
+  "objectives": [
+    {
+      "objectiveId": "uuid-obj-1",
+      "objectiveCode": "REDUCE_DEFECTS",
+      "objectiveName": "Reducir defectos",
+      "weightedScore": 82.5,
+      "worstStatus": "OK",
+      "indicatorCount": 3,
+      "trend": "UP"
+    },
+    {
+      "objectiveId": "uuid-obj-2",
+      "objectiveCode": "IMPROVE_PRODUCTIVITY",
+      "objectiveName": "Mejorar productividad",
+      "weightedScore": 65.0,
+      "worstStatus": "WARNING",
+      "indicatorCount": 4,
+      "trend": "DOWN"
+    },
+    {
+      "objectiveId": "uuid-obj-3",
+      "objectiveCode": "INCREASE_STABILITY",
+      "objectiveName": "Aumentar estabilidad",
+      "weightedScore": 45.0,
+      "worstStatus": "CRITICAL",
+      "indicatorCount": 5,
+      "trend": "STABLE"
+    }
   ]
 }
 ```
