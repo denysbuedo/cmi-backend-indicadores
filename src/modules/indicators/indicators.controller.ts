@@ -4,6 +4,7 @@ import {
   Post,
   Patch,
   Delete,
+  Put,
   Param,
   Body,
   Req,
@@ -11,6 +12,7 @@ import {
 import { IndicatorsService } from './indicators.service';
 import { CreateIndicatorDto } from './dto/create-indicator.dto';
 import { UpdateIndicatorDto } from './dto/update-indicator.dto';
+import { UpdateIndicatorValueDto } from './dto/update-indicator-value.dto';
 import type { Request } from 'express';
 
 @Controller('indicators')
@@ -69,6 +71,34 @@ export class IndicatorsController {
     return this.indicatorsService.getIndicatorHistory(
       req['tenantId'],
       id,
+    );
+  }
+
+  @Put(':id/values/:valueId')
+  updateValue(
+    @Req() req: Request,
+    @Param('id') indicatorId: string,
+    @Param('valueId') valueId: string,
+    @Body() dto: UpdateIndicatorValueDto,
+  ) {
+    return this.indicatorsService.updateValue(
+      req['tenantId'],
+      indicatorId,
+      valueId,
+      dto,
+    );
+  }
+
+  @Delete(':id/values/:valueId')
+  deleteValue(
+    @Req() req: Request,
+    @Param('id') indicatorId: string,
+    @Param('valueId') valueId: string,
+  ) {
+    return this.indicatorsService.deleteValue(
+      req['tenantId'],
+      indicatorId,
+      valueId,
     );
   }
 }

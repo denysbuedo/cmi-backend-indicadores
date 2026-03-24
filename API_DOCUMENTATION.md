@@ -500,6 +500,76 @@ POST /indicators/:id/values
 
 ---
 
+### 9. Actualizar Valor de Indicador
+
+```http
+PUT /indicators/:indicatorId/values/:valueId
+```
+
+**Body:**
+```json
+{
+  "value": 88.5,
+  "target": 90,
+  "periodStart": "2026-01-01T00:00:00Z",
+  "periodEnd": "2026-12-31T23:59:59Z"
+}
+```
+
+**Campos:**
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `value` | number | ✅ | Valor medido del indicador |
+| `target` | number | ❌ | Valor objetivo/target (puede ser null) |
+| `periodStart` | datetime | ✅ | Inicio del periodo |
+| `periodEnd` | datetime | ✅ | Fin del periodo |
+
+**Validaciones:**
+- El indicador debe existir y pertenecer al tenant
+- El valor debe existir y pertenecer al indicador
+
+**Respuesta:**
+```json
+{
+  "id": "uuid-valor",
+  "indicatorId": "uuid-indicador",
+  "tenantId": "uuid-tenant",
+  "value": 88.5,
+  "target": 90,
+  "periodStart": "2026-01-01T00:00:00Z",
+  "periodEnd": "2026-12-31T23:59:59Z",
+  "status": "OK",
+  "error": null,
+  "createdAt": "2026-01-15T10:30:00Z"
+}
+```
+
+---
+
+### 10. Eliminar Valor de Indicador
+
+```http
+DELETE /indicators/:indicatorId/values/:valueId
+```
+
+**Descripción:**
+Elimina permanentemente un valor de indicador (hard delete).
+
+**Validaciones:**
+- El indicador debe existir y pertenecer al tenant
+- El valor debe existir y pertenecer al indicador
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "message": "Valor eliminado correctamente"
+}
+```
+
+---
+
 ## Ejecución
 
 **Base:** `/execution`
