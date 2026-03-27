@@ -23,10 +23,15 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest(err, user, info) {
+  handleRequest(err, user, info, context) {
     if (err || !user) {
       throw err || new UnauthorizedException('No autorizado');
     }
+    
+    // Inyectar usuario en el request
+    const request = context.switchToHttp().getRequest();
+    request['user'] = user;
+    
     return user;
   }
 }

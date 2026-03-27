@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -8,8 +8,25 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto) {
-    // Verificar si el email ya existe
+  async create(tenantId: string, user: any, createUserDto: CreateUserDto) {
+    console.log('🔍 CREATE USER - Debug:', { tenantId, user, email: createUserDto.email });
+    
+    // 1. Validar permisos
+    if (!user || user.role === 'USER') {
+      console.error('❌ USER sin permisos:', user);
+      throw new ForbiddenException('No tiene permisos para crear usuarios');
+    }
+
+    // 2. Si es TENANT_ADMIN, validar que solo cree en su tenant
+    if (user.role === 'TENANT_ADMIN') {
+      // Verificar que el tenant del header es el suyo
+      const isOwnTenant = await this.validateTenantOwnership(user.userId, tenantId);
+      if (!isOwnTenant) {
+        throw new ForbiddenException('Solo puede crear usuarios en su tenant');
+      }
+    }
+
+    // 3. Verificar si el email ya existe
     const existing = await this.prisma.user.findFirst({
       where: { email: createUserDto.email },
     });
@@ -18,11 +35,11 @@ export class UsersService {
       throw new ConflictException('El email ya está registrado');
     }
 
-    // Hashear password
+    // 4. Hashear password
     const passwordHash = await bcrypt.hash(createUserDto.password, 10);
 
-    // Crear usuario
-    const user = await this.prisma.user.create({
+    // 5. Crear usuario
+    const newUser = await this.prisma.user.create({
       data: {
         email: createUserDto.email,
         passwordHash,
@@ -31,19 +48,37 @@ export class UsersService {
       },
     });
 
-    // Si se especificaron tenants, asignarlos
-    if (createUserDto.tenantIds && createUserDto.tenantIds.length > 0) {
-      await this.prisma.userTenant.createMany({
-        data: createUserDto.tenantIds.map((tenantId) => ({
-          userId: user.id,
+    console.log('✅ Usuario creado:', newUser.id);
+
+    // 6. Asignar usuario al tenant automáticamente
+    try {
+      await this.prisma.userTenant.create({
+        data: {
+          userId: newUser.id,
           tenantId,
           role: 'VIEWER',
-        })),
+        },
       });
+      console.log('✅ Usuario asignado al tenant:', tenantId);
+    } catch (error) {
+      console.error('❌ Error al asignar tenant:', error);
+      throw error;
     }
 
-    const { passwordHash: _, ...result } = user;
+    const { passwordHash: _, ...result } = newUser;
     return result;
+  }
+
+  // Validar que el usuario es dueño del tenant
+  async validateTenantOwnership(userId: string, tenantId: string): Promise<boolean> {
+    const userTenant = await this.prisma.userTenant.findFirst({
+      where: {
+        userId,
+        tenantId,
+      },
+    });
+
+    return userTenant !== null;
   }
 
   async findAll() {

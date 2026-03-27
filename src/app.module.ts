@@ -51,11 +51,10 @@ export class AppModule {
         'auth/change-password',
         // Health check
         'health',
-        // Gestión global (requieren auth pero NO tenant)
+        // Tenants by subdomain (público)
+        'tenants/by-subdomain/*',
+        // Tenants list (solo SUPER_ADMIN)
         'tenants',
-        'tenants/*',
-        'users',
-        'users/*',
       )
       .forRoutes('*');
   }
