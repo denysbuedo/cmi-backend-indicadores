@@ -12,6 +12,10 @@ import { ExecutionModule } from './modules/execution/execution.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AutomationModule } from './modules/automation/automation.module';
 
+import { AuthModule } from './modules/auth/auth.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
+import { UsersModule } from './modules/users/users.module';
+
 import { TenantMiddleware } from './modules/common/middleware/tenant.middleware';
 
 @Module({
@@ -30,10 +34,29 @@ import { TenantMiddleware } from './modules/common/middleware/tenant.middleware'
     ExecutionModule,
     DashboardModule,
     AutomationModule,
+    AuthModule,
+    TenantsModule,
+    UsersModule,
   ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TenantMiddleware).forRoutes('*');
+    consumer
+      .apply(TenantMiddleware)
+      .exclude(
+        // Auth endpoints (no requieren auth ni tenant)
+        'auth/login',
+        'auth/register',
+        'auth/me',
+        'auth/change-password',
+        // Health check
+        'health',
+        // Gestión global (requieren auth pero NO tenant)
+        'tenants',
+        'tenants/*',
+        'users',
+        'users/*',
+      )
+      .forRoutes('*');
   }
 }
