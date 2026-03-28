@@ -36,11 +36,23 @@ enum EvaluationDirection {
   LOWER_IS_BETTER
 }
 
+enum UserRole {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  USER
+}
+
+enum TenantRole {
+  ADMIN
+  VIEWER
+}
+
 model Tenant {
-  id     String  @id @default(uuid())
-  name   String
-  code   String  @unique
-  active Boolean @default(true)
+  id        String  @id @default(uuid())
+  name      String
+  code      String  @unique
+  subdomain String  @unique
+  active    Boolean @default(true)
 
   indicators      Indicator[]
   sources         Source[]
@@ -48,7 +60,8 @@ model Tenant {
   processes       Process[]
   objectives      Objective[]
   indicatorValues IndicatorValue[]
-  executionLogs   ExecutionLog[]   // 👈 NUEVO
+  executionLogs   ExecutionLog[]
+  users           UserTenant[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -105,6 +118,7 @@ model Process {
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   indicators Indicator[]
+  users      UserProcess[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -122,6 +136,7 @@ model Objective {
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   indicators IndicatorObjective[]
+  users      UserObjective[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -158,6 +173,7 @@ model Indicator {
   sources    IndicatorSource[]
   values     IndicatorValue[]
   executionLogs ExecutionLog[]
+  users      UserIndicator[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -228,6 +244,72 @@ model ExecutionLog {
   indicator Indicator @relation(fields: [indicatorId], references: [id])
 
   @@index([tenantId])
+  @@index([indicatorId])
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  role         UserRole
+  active       Boolean    @default(true)
+
+  tenants      UserTenant[]
+  processes    UserProcess[]
+  objectives   UserObjective[]
+  indicators   UserIndicator[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserTenant {
+  userId    String
+  tenantId  String
+  role      TenantRole
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tenantId])
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model UserProcess {
+  userId    String
+  processId String
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  process   Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+
+  @@id([userId, processId])
+  @@index([userId])
+  @@index([processId])
+}
+
+model UserObjective {
+  userId       String
+  objectiveId  String
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  objective    Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+
+  @@id([userId, objectiveId])
+  @@index([userId])
+  @@index([objectiveId])
+}
+
+model UserIndicator {
+  userId       String
+  indicatorId  String
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  indicator    Indicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+
+  @@id([userId, indicatorId])
+  @@index([userId])
   @@index([indicatorId])
 }
 

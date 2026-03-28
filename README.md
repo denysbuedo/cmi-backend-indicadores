@@ -154,6 +154,8 @@ El servidor correrá en `http://localhost:3000`
 | `PATCH` | `/indicators/:id/toggle` | Activar/desactivar |
 | `DELETE` | `/indicators/:id` | Eliminar (soft) |
 | `POST` | `/indicators/:id/values` | Crear valor |
+| `PUT` | `/indicators/:id/values/:valueId` | Actualizar valor |
+| `DELETE` | `/indicators/:id/values/:valueId` | Eliminar valor |
 
 ### Ejecución
 

@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateIndicatorDto } from './dto/create-indicator.dto';
 import { UpdateIndicatorDto } from './dto/update-indicator.dto';
+import { UpdateIndicatorValueDto } from './dto/update-indicator-value.dto';
 
 @Injectable()
 export class IndicatorsService {
@@ -231,14 +232,22 @@ export class IndicatorsService {
   ) {
     const indicator = await this.findOne(tenantId, indicatorId);
 
+    // Manejar fechas que ya vienen completas o solo YYYY-MM-DD
+    const parseDate = (dateStr: string, setEndOfDay: boolean) => {
+      if (dateStr.includes('T')) {
+        return new Date(dateStr);
+      }
+      return new Date(dateStr + (setEndOfDay ? 'T23:59:59.999Z' : 'T00:00:00.000Z'));
+    };
+
     return this.prisma.indicatorValue.create({
       data: {
         indicatorId: indicator.id,
         tenantId,
         value: dto.value,
         target: dto.target ?? null,
-        periodStart: new Date(dto.periodStart + "T00:00:00.000Z"),
-        periodEnd: new Date(dto.periodEnd + "T23:59:59.999Z"),
+        periodStart: parseDate(dto.periodStart, false),
+        periodEnd: parseDate(dto.periodEnd, true),
         status: 'OK',
       },
     });
@@ -253,5 +262,81 @@ export class IndicatorsService {
       },
       orderBy: { periodStart: 'asc' },
     });
+  }
+
+  // UPDATE VALUE
+  async updateValue(
+    tenantId: string,
+    indicatorId: string,
+    valueId: string,
+    dto: UpdateIndicatorValueDto,
+  ) {
+    // 1. Validar que el indicador existe y pertenece al tenant
+    const indicator = await this.findOne(tenantId, indicatorId);
+
+    // 2. Validar que el valor existe y pertenece al indicador
+    const value = await this.prisma.indicatorValue.findFirst({
+      where: {
+        id: valueId,
+        indicatorId,
+      },
+    });
+
+    if (!value) {
+      throw new NotFoundException('Valor no encontrado');
+    }
+
+    // 3. Actualizar - manejar fechas que ya vienen completas o solo YYYY-MM-DD
+    const parseDate = (dateStr: string, setEndOfDay: boolean) => {
+      // Si ya viene con hora (ISO completo), usarlo directamente
+      if (dateStr.includes('T')) {
+        return new Date(dateStr);
+      }
+      // Si viene solo YYYY-MM-DD, agregar la hora
+      return new Date(dateStr + (setEndOfDay ? 'T23:59:59.999Z' : 'T00:00:00.000Z'));
+    };
+
+    const updated = await this.prisma.indicatorValue.update({
+      where: { id: valueId },
+      data: {
+        value: dto.value,
+        target: dto.target ?? null,
+        periodStart: parseDate(dto.periodStart, false),
+        periodEnd: parseDate(dto.periodEnd, true),
+      },
+    });
+
+    // 4. Retornar el valor actualizado
+    return updated;
+  }
+
+  // DELETE VALUE
+  async deleteValue(
+    tenantId: string,
+    indicatorId: string,
+    valueId: string,
+  ) {
+    // 1. Validar que el indicador existe y pertenece al tenant
+    const indicator = await this.findOne(tenantId, indicatorId);
+
+    // 2. Validar que el valor existe y pertenece al indicador
+    const value = await this.prisma.indicatorValue.findFirst({
+      where: {
+        id: valueId,
+        indicatorId,
+      },
+    });
+
+    if (!value) {
+      throw new NotFoundException('Valor no encontrado');
+    }
+
+    // 3. Eliminar (hard delete)
+    await this.prisma.indicatorValue.delete({
+      where: { id: valueId },
+    });
+
+    // 4. Retornar mensaje de éxito
+    return { success: true, message: 'Valor eliminado correctamente' };
   }
 }
